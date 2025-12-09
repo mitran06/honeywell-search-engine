@@ -1,25 +1,23 @@
 version: '3.8'
 
 services:
-  # PostgreSQL - PDF metadata & user data
   postgres:
     image: postgres:15
     container_name: search-postgres
     environment:
-      POSTGRES_DB: searchdb
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: pdfmeta
+      POSTGRES_USER: pdfuser
+      POSTGRES_PASSWORD: pdfpass
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U pdfuser -d pdfmeta"]
       interval: 10s
       timeout: 5s
       retries: 5
 
-  # Qdrant - Vector database for embeddings
   qdrant:
     image: qdrant/qdrant:latest
     container_name: search-qdrant
@@ -31,7 +29,6 @@ services:
     environment:
       QDRANT__SERVICE__GRPC_PORT: 6334
 
-  # MinIO - Object storage for PDF files
   minio:
     image: minio/minio:latest
     container_name: search-minio
@@ -45,12 +42,11 @@ services:
     volumes:
       - minio_data:/data
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      test: ["CMD", "curl", "-f", "http://minio:9000/minio/health/live"]
       interval: 30s
       timeout: 20s
       retries: 3
 
-  # Redis - Celery broker for background tasks
   redis:
     image: redis:7-alpine
     container_name: search-redis
