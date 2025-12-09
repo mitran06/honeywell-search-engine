@@ -1,0 +1,43 @@
+.container {
+  min-height: calc(100vh - 64px);
+  background-color: var(--color-bg-secondary);
+}
+
+.content {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: var(--spacing-lg);
+}
+
+/* Page header */
+.pageHeader {
+  margin-bottom: var(--spacing-lg);
+}
+
+.pageTitle {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.pageDescription {
+  font-size: var(--font-size-base);
+  color: var(--color-text-secondary);
+  margin-top: var(--spacing-xs);
+}
+
+/* Variants */
+.fullWidth .content {
+  max-width: none;
+}
+
+.noPadding .content {
+  padding: 0;
+}
+
+.centered {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
