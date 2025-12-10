@@ -4,8 +4,14 @@ from functools import lru_cache
 
 class Settings(BaseSettings):
     # Database
-    database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/searchdb"
+    database_url: str = "postgresql+asyncpg://pdfuser:pdfpass@localhost:5432/pdfmeta"
     
+    # minIO
+    minio_endpoint: str = "localhost:9000"
+    minio_access_key: str = "minioadmin"
+    minio_secret_key: str = "minioadmin"
+    minio_bucket: str = "pdf-ingest"
+
     # JWT
     jwt_secret_key: str = "your-super-secret-key-change-in-production"
     jwt_algorithm: str = "HS256"
@@ -19,7 +25,6 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         case_sensitive = False
-
 
 @lru_cache()
 def get_settings() -> Settings:
