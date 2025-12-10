@@ -72,6 +72,14 @@ async def upload_pdfs(
             file_size = file.file.tell()
             file.file.seek(0)  # Reset to beginning
 
+            # Validate file size
+            if file_size > settings.max_upload_size:
+                errors.append({
+                    "filename": file.filename,
+                    "error": f"File too large. Maximum size is {settings.max_upload_size // (1024 * 1024)}MB"
+                })
+                continue
+
             # Upload to MinIO
             minio_client.put_object(
                 settings.minio_bucket,

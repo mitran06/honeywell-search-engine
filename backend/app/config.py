@@ -22,6 +22,9 @@ class Settings(BaseSettings):
     app_name: str = "PDF Search Engine"
     debug: bool = True
     
+    # Upload limits
+    max_upload_size: int = 500 * 1024 * 1024  # 500MB
+    
     class Config:
         env_file = ".env"
         case_sensitive = False
