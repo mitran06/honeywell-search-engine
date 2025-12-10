@@ -57,8 +57,7 @@ async def http_exception_handler(request: Request, exc: HTTPException):
 # Include routers
 app.include_router(auth_router, prefix="/api/auth")
 app.include_router(search_history_router, prefix="/api")
-
-app.include_router(upload_router)
+app.include_router(upload_router, prefix="/api")
 
 
 # Health check endpoint

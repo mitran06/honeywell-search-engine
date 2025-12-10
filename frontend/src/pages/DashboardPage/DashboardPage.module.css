@@ -263,7 +263,12 @@
   text-transform: capitalize;
 }
 
-.statusBadge.ready {
+.statusBadge.pending {
+  background: var(--color-text-muted);
+  color: white;
+}
+
+.statusBadge.completed {
   background: var(--color-success);
   color: white;
 }
@@ -273,7 +278,7 @@
   color: white;
 }
 
-.statusBadge.error {
+.statusBadge.failed {
   background: var(--color-error);
   color: white;
 }

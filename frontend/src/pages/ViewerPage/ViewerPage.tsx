@@ -38,7 +38,7 @@ export function ViewerPage() {
       try {
         // Get document metadata
         const metaResponse = await documentsApi.getDocument(documentId);
-        setDocumentName(metaResponse.data.name);
+        setDocumentName(metaResponse.data.filename);
 
         // Get PDF file
         const blob = await documentsApi.getDocumentFile(documentId);

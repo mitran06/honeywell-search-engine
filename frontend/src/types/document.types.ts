@@ -1,17 +1,35 @@
-export type DocumentStatus = 'queued' | 'processing' | 'ready' | 'failed';
+export type DocumentStatus = 'pending' | 'processing' | 'completed' | 'failed';
 
 export interface Document {
   id: string;
-  name: string;
-  size: number;
-  pageCount: number;
+  filename: string;
+  file_size: number;
+  page_count: number | null;
   status: DocumentStatus;
-  uploadedAt: string;
-  processedAt?: string;
+  created_at: string;
+  updated_at?: string;
+  error_message?: string | null;
+  object_key?: string;
+}
+
+export interface UploadedDocument {
+  id: string;
+  filename: string;
+  object_key: string;
+  file_size: number;
+  status: DocumentStatus;
+}
+
+export interface UploadError {
+  filename: string;
+  error: string;
 }
 
 export interface DocumentUploadResponse {
-  documents: Pick<Document, 'id' | 'name' | 'status'>[];
+  uploaded: UploadedDocument[];
+  errors: UploadError[];
+  total_uploaded: number;
+  total_errors: number;
 }
 
 export interface DocumentStatusResponse {
@@ -27,14 +45,7 @@ export interface DocumentListParams {
   status?: DocumentStatus;
 }
 
-export interface Pagination {
-  page: number;
-  limit: number;
-  total: number;
-  totalPages: number;
-}
-
 export interface DocumentListResponse {
   documents: Document[];
-  pagination: Pagination;
+  total: number;
 }

@@ -261,11 +261,11 @@ export function DashboardPage() {
                 <div key={doc.id} className={styles.documentRow}>
                   <span className={styles.docName}>
                     <HiDocumentText size={18} />
-                    {doc.name}
+                    {doc.filename}
                   </span>
-                  <span className={styles.docSize}>{formatFileSize(doc.size)}</span>
+                  <span className={styles.docSize}>{formatFileSize(doc.file_size)}</span>
                   <span className={getStatusClass(doc.status)}>{doc.status}</span>
-                  <span className={styles.docDate}>{formatRelativeTime(doc.uploadedAt)}</span>
+                  <span className={styles.docDate}>{formatRelativeTime(doc.created_at)}</span>
                   <button
                     className={styles.deleteBtn}
                     onClick={() => handleDeleteDocument(doc.id)}

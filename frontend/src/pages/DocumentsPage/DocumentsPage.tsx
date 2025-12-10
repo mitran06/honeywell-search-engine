@@ -128,15 +128,15 @@ export function DocumentsPage() {
               <div key={doc.id} className={styles.documentCard}>
                 <div className={styles.documentHeader}>
                   <HiDocumentText size={24} className={styles.documentIcon} />
-                  <span className={styles.documentName} title={doc.name}>
-                    {doc.name}
+                  <span className={styles.documentName} title={doc.filename}>
+                    {doc.filename}
                   </span>
                 </div>
                 <div className={styles.documentBody}>
                   <div className={styles.documentMeta}>
-                    <span>{formatFileSize(doc.size)}</span>
-                    <span>{doc.pageCount} pages</span>
-                    <span>Uploaded {formatRelativeTime(doc.uploadedAt)}</span>
+                    <span>{formatFileSize(doc.file_size)}</span>
+                    <span>{doc.page_count ?? '-'} pages</span>
+                    <span>Uploaded {formatRelativeTime(doc.created_at)}</span>
                   </div>
                 </div>
                 <div className={styles.documentFooter}>
