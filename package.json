@@ -3,17 +3,23 @@
   "version": "1.0.0",
   "description": "Enterprise PDF Vector Search Engine",
   "private": true,
-  "scripts": {
-    "dev": "concurrently -k -n \"backend,frontend\" -c \"yellow,cyan\" \"npm run dev:backend\" \"npm run dev:frontend\"",
-    "dev:backend": "cd backend && .\\venv\\Scripts\\python.exe -m uvicorn app.main:app --reload --port 8000",
-    "dev:frontend": "cd frontend && npm run dev",
-    "docker:up": "cd docker && docker-compose -f docker-compose.dev.yml up -d",
-    "docker:down": "cd docker && docker-compose -f docker-compose.dev.yml down",
-    "docker:logs": "cd docker && docker-compose -f docker-compose.dev.yml logs -f",
-    "start": "npm run docker:up && timeout /t 5 && npm run dev",
-    "stop": "npm run docker:down",
-    "install:all": "cd frontend && npm install"
-  },
+"scripts": {
+  "dev": "concurrently -k -n \"backend,frontend,worker\" -c \"yellow,cyan,magenta\" \"npm run dev:backend\" \"npm run dev:frontend\" \"npm run dev:worker\"",
+
+  "dev:backend": "cd backend && .\\venv\\Scripts\\python.exe -m uvicorn app.main:app --reload --port 8000",
+  
+  "dev:frontend": "cd frontend && npm run dev",
+
+  "dev:worker": "cd backend && .\\venv\\Scripts\\python.exe -m celery -A worker.celery_app worker --loglevel=info --pool=solo",
+
+  "docker:up": "cd docker && docker-compose -f docker-compose.dev.yml up -d",
+  "docker:down": "cd docker-compose.dev.yml down",
+  "docker:logs": "cd docker && docker-compose -f docker-compose.dev.yml logs -f",
+  "start": "npm run docker:up && timeout /t 5 && npm run dev",
+  "stop": "npm run docker:down",
+  "install:all": "cd frontend && npm install"
+}
+,
   "devDependencies": {
     "concurrently": "^8.2.2"
   }
