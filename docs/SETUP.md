@@ -161,7 +161,7 @@ npm run lint
 uvicorn app.main:app --reload
 
 # Run Celery worker
-celery -A app.celery_worker worker --loglevel=info
+python -m celery -A app.celery_worker worker --loglevel=info --pool=solo
 
 # Run database migrations
 alembic upgrade head
