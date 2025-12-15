@@ -71,15 +71,17 @@ def embed_pdf(pdf_id: str):
         # 🔥 Insert into Qdrant
         upsert_points(points)
 
-        # ✅ SAFE update (NO uuid[] casting)
-        db.execute(
-            text("""
-                UPDATE pdf_chunks
-                SET embedded = TRUE
-                WHERE id IN :ids
-            """).bindparams(
-                ids=tuple(chunk_ids)
+        # Mark chunks as embedded
+        for cid in chunk_ids:
+            db.execute(
+                text("UPDATE pdf_chunks SET embedded = TRUE WHERE id = :id"),
+                {"id": cid},
             )
+
+        # Mark PDF as embedded/completed
+        db.execute(
+            text("UPDATE pdf_metadata SET status='COMPLETED' WHERE id=:id"),
+            {"id": pdf_id},
         )
 
         db.commit()
@@ -92,6 +94,11 @@ def embed_pdf(pdf_id: str):
 
     except Exception:
         db.rollback()
+        db.execute(
+            text("UPDATE pdf_metadata SET status='EMBED_FAILED', error_message='embedding failed' WHERE id=:id"),
+            {"id": pdf_id},
+        )
+        db.commit()
         logger.exception("Embedding failed for %s", pdf_id)
         raise
 

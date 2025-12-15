@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import Integer, Text, ForeignKey
+from sqlalchemy import Integer, Text, ForeignKey, Boolean
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.dialects.postgresql import UUID
 from app.database import Base
@@ -41,4 +41,10 @@ class PDFChunk(Base):
     length_chars: Mapped[int] = mapped_column(
         Integer,
         nullable=True
+    )
+
+    embedded: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        server_default=text("false")
     )

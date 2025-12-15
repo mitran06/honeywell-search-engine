@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from sqlalchemy import text
 
 from app.services.embeddings.embedder import embed_text_async
-from app.services.qdrant.qdrant_client import upsert_embeddings
+from app.services.qdrant.qdrant_client import ensure_collection, upsert_points
 from app.config import settings
 
 logger = logging.getLogger("pipeline")
@@ -25,11 +25,18 @@ async def run_embedding_pipeline(pdf_id: str):
         vector = await embed_text_async(text_data)
         vectors.append((chunk_id, vector))
 
-    await upsert_embeddings(pdf_id, vectors)
+    ensure_collection()
+
+    points = [
+        {"id": str(chunk_id), "vector": vector, "payload": {"pdf_id": pdf_id}}
+        for chunk_id, vector in vectors
+    ]
+
+    upsert_points(points)
 
     async with Session() as session:
         await session.execute(
-            text("UPDATE pdf_metadata SET status='EMBEDDED' WHERE id=:id"),
+            text("UPDATE pdf_metadata SET status='COMPLETED' WHERE id=:id"),
             {"id": pdf_id}
         )
         await session.commit()
