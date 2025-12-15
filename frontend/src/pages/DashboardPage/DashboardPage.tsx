@@ -218,10 +218,13 @@ export function DashboardPage() {
             <p className={styles.dropzoneText}>
               {isDragActive
                 ? 'Drop your PDF files here'
-                : 'Drag & drop PDF files here, or click to select'}
+                : 'Drag & drop / click to select'}
             </p>
             <p className={styles.dropzoneHint}>
               Max file size: {formatFileSize(FILE_LIMITS.MAX_FILE_SIZE)}
+            </p>
+            <p className={styles.dropzoneHint}>
+              File format: .pdf only
             </p>
           </div>
 
