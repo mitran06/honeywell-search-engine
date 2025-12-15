@@ -21,9 +21,10 @@ class Settings(BaseSettings):
     # App
     app_name: str = "PDF Search Engine"
     debug: bool = True
-    
-    # Upload limits
-    max_upload_size: int = 500 * 1024 * 1024  # 500MB
+
+    qdrant_host: str = "localhost"
+    qdrant_port: int = 6333
+
     
     class Config:
         env_file = ".env"

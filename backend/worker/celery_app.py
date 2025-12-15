@@ -15,8 +15,8 @@ celery_app.conf.update(
     task_serializer="json",
     result_serializer="json",
     accept_content=["json"],
-
 )
 
-from worker import tasks
 
+from worker import tasks          # process_pdf
+from worker import tasks_embedding  # embed_pdf

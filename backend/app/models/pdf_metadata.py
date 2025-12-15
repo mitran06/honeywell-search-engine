@@ -12,6 +12,7 @@ class ProcessingStatus(str, Enum):
     PROCESSING = "processing"
     COMPLETED = "completed"
     FAILED = "failed"
+    EMBED_FAILED = "embed_failed"
 
 
 class PDFMetadata(Base):
