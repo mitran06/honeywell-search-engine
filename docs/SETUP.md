@@ -69,7 +69,7 @@ pip install -r requirements.txt
 cp .env.example .env
 
 # Start development server
-uvicorn app.main:app --reload --port 8000
+uvicorn app.main:app --reload --port 8001
 ```
 
 Backend API will be available at: http://localhost:8000
@@ -161,7 +161,7 @@ npm run lint
 uvicorn app.main:app --reload
 
 # Run Celery worker
-celery -A app.celery_worker worker --loglevel=info
+python -m celery -A app.celery_worker worker --loglevel=info --pool=solo
 
 # Run database migrations
 alembic upgrade head

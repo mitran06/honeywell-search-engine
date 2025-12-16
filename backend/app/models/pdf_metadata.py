@@ -8,10 +8,11 @@ from app.database import Base
 
 
 class ProcessingStatus(str, Enum):
-    PENDING = "pending"
-    PROCESSING = "processing"
-    COMPLETED = "completed"
-    FAILED = "failed"
+    PENDING = "PENDING"
+    PROCESSING = "PROCESSING"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
+    EMBED_FAILED = "EMBED_FAILED"
 
 
 class PDFMetadata(Base):

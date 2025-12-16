@@ -1,9 +1,9 @@
-# Backend Dependencies
+# FastAPI & Server
 fastapi>=0.109.0
 uvicorn[standard]>=0.27.0
 python-dotenv>=1.0.0
 
-# Database
+# Database & Async ORM
 sqlalchemy[asyncio]>=2.0.25
 asyncpg>=0.29.0
 alembic>=1.13.1
@@ -17,5 +17,27 @@ pydantic>=2.5.0
 pydantic-settings>=2.1.0
 email-validator>=2.1.0
 
-# CORS
+# File Upload / CORS
 python-multipart>=0.0.6
+
+# MinIO Client
+minio>=7.2.0
+
+# Celery + Redis Broker/Backend
+celery>=5.3.6
+redis>=5.0.1
+
+# PDF Processing (PyMuPDF)
+pymupdf>=1.23.7
+
+# NLP (spaCy, optional but required for your cleaning pipeline)
+spacy>=3.7.2
+# spaCy model is installed separately:
+# python -m spacy download en_core_web_sm
+
+# Utilities
+tenacity>=8.2.3
+
+# Vector DB & Embeddings
+qdrant-client>=1.9.0
+sentence-transformers>=2.7.0
