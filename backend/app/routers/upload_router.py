@@ -150,6 +150,7 @@ async def list_documents(
                     "file_size": doc.file_size,
                     "page_count": doc.page_count,
                     "status": doc.status.value.lower(),
+                    "error_message": doc.error_message,
                     "created_at": doc.created_at.isoformat(),
                 }
                 for doc in documents

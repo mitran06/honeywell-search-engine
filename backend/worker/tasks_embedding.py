@@ -30,18 +30,23 @@ def embed_pdf(pdf_id: str):
     try:
         ensure_collection()
 
+        # 🔥 Only embed CHILD chunks - they are optimized for vector search
+        # Parent chunks are kept for context/reranking but not embedded
         rows = db.execute(
             text("""
-                SELECT id, chunk_text, page_num, chunk_index
-                FROM pdf_chunks
-                WHERE pdf_metadata_id = :pid
-                  AND embedded = FALSE
+                SELECT c.id, c.chunk_text, c.page_num, c.chunk_index, c.parent_chunk_id,
+                       COALESCE(p.chunk_text, c.chunk_text) as parent_text
+                FROM pdf_chunks c
+                LEFT JOIN pdf_chunks p ON c.parent_chunk_id = p.id
+                WHERE c.pdf_metadata_id = :pid
+                  AND c.embedded = FALSE
+                  AND c.chunk_type = 'CHILD'
             """),
             {"pid": pdf_id}
         ).fetchall()
 
         if not rows:
-            logger.info("No chunks to embed for %s", pdf_id)
+            logger.info("No child chunks to embed for %s", pdf_id)
             # Mark as completed if everything is already embedded
             db.execute(
                 text("UPDATE pdf_metadata SET status='COMPLETED' WHERE id=:id"),
@@ -62,6 +67,9 @@ def embed_pdf(pdf_id: str):
                 "page": r.page_num,
                 "chunk_index": r.chunk_index,
                 "text": r.chunk_text,
+                # Include parent text for expanded context in search results
+                "parent_text": r.parent_text,
+                "parent_chunk_id": str(r.parent_chunk_id) if r.parent_chunk_id else None,
             })
 
         embeddings = generate_embeddings(texts)

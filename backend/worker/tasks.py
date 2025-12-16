@@ -107,27 +107,14 @@ def clean_text(text: str, use_spacy: bool = True) -> str:
     return text
 
 # ------------------------------------------------------
-# Chunking (UNCHANGED LOGIC)
+# Advanced Chunking (5 Improvements)
+# - Sentence-aware boundaries
+# - Larger chunk size (250 tokens)
+# - Recursive/hierarchical splitting
+# - Parent-child chunks for precision + context
+# - Token-based sizing using model tokenizer
 # ------------------------------------------------------
-def chunk_text(text: str, max_tokens: int = 120, overlap_ratio: float = 0.2):
-    words = text.split()
-    if not words:
-        return []
-
-    overlap = int(max_tokens * overlap_ratio)
-    step = max(1, max_tokens - overlap)
-
-    chunks = []
-    idx = 0
-    start = 0
-
-    while start < len(words):
-        end = start + max_tokens
-        chunks.append((idx, " ".join(words[start:end])))
-        idx += 1
-        start += step
-
-    return chunks
+from .chunking import chunk_document_page, token_count
 
 # ------------------------------------------------------
 # CELERY TASK (SYNC, SAFE)
@@ -154,30 +141,67 @@ def process_pdf(pdf_id: str, object_key: str, use_spacy: bool = True):
         inserts = 0
         for page_num, page_text in pages:
             cleaned = clean_text(page_text, use_spacy)
-            chunks = chunk_text(cleaned)
-
-            for idx, chunk in chunks:
-                if not chunk:
+            
+            # 🔥 Advanced chunking: creates parent + child chunks
+            parents, children = chunk_document_page(cleaned, page_num)
+            
+            # Track parent DB IDs for linking children
+            parent_db_ids = {}
+            
+            # Insert parent chunks first
+            for parent in parents:
+                if not parent.text:
                     continue
-
-                db.execute(
+                
+                result = db.execute(
                     text("""
                         INSERT INTO pdf_chunks
-                        (pdf_metadata_id, page_num, chunk_index, chunk_text, length_chars)
-                        VALUES (:pid, :pg, :idx, :txt, :len)
+                        (pdf_metadata_id, page_num, chunk_index, chunk_text, 
+                         length_chars, token_count, chunk_type, parent_chunk_id)
+                        VALUES (:pid, :pg, :idx, :txt, :len, :tokens, 'PARENT', NULL)
+                        RETURNING id
                     """),
                     {
                         "pid": pdf_id,
                         "pg": page_num,
-                        "idx": idx,
-                        "txt": chunk,
-                        "len": len(chunk),
+                        "idx": parent.index,
+                        "txt": parent.text,
+                        "len": parent.char_count,
+                        "tokens": parent.token_count,
                     }
                 )
-
+                parent_db_id = result.fetchone()[0]
+                parent_db_ids[parent.index] = parent_db_id
                 inserts += 1
-                if inserts % 100 == 0:
-                    db.commit()
+            
+            # Insert child chunks linked to parents
+            for child in children:
+                if not child.text:
+                    continue
+                
+                parent_db_id = parent_db_ids.get(child.parent_index)
+                
+                db.execute(
+                    text("""
+                        INSERT INTO pdf_chunks
+                        (pdf_metadata_id, page_num, chunk_index, chunk_text,
+                         length_chars, token_count, chunk_type, parent_chunk_id)
+                        VALUES (:pid, :pg, :idx, :txt, :len, :tokens, 'CHILD', :parent_id)
+                    """),
+                    {
+                        "pid": pdf_id,
+                        "pg": page_num,
+                        "idx": child.index,
+                        "txt": child.text,
+                        "len": child.char_count,
+                        "tokens": child.token_count,
+                        "parent_id": parent_db_id,
+                    }
+                )
+                inserts += 1
+                
+            if inserts % 100 == 0:
+                db.commit()
 
         db.commit()
 

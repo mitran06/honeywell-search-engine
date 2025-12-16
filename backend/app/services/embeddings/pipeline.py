@@ -20,6 +20,15 @@ async def run_embedding_pipeline(pdf_id: str):
         )
         chunks = rows.fetchall()
 
+    if not chunks:
+        async with Session() as session:
+            await session.execute(
+                text("UPDATE pdf_metadata SET status='COMPLETED' WHERE id=:id"),
+                {"id": pdf_id}
+            )
+            await session.commit()
+        return
+
     vectors = []
     payloads = []
     for chunk_id, text_data, page_num, chunk_index in chunks:
@@ -42,6 +51,10 @@ async def run_embedding_pipeline(pdf_id: str):
     upsert_points(points)
 
     async with Session() as session:
+        await session.execute(
+            text("UPDATE pdf_chunks SET embedded=TRUE WHERE pdf_metadata_id=:id"),
+            {"id": pdf_id},
+        )
         await session.execute(
             text("UPDATE pdf_metadata SET status='COMPLETED' WHERE id=:id"),
             {"id": pdf_id}

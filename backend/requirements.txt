@@ -41,3 +41,6 @@ tenacity>=8.2.3
 # Vector DB & Embeddings
 qdrant-client>=1.9.0
 sentence-transformers>=2.7.0
+
+# Tokenizer for accurate chunk sizing
+transformers>=4.36.0

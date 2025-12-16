@@ -95,10 +95,16 @@ async def search_documents(
             # Extra safety; skip results outside user scope
             continue
 
-        text = h.get("text") or ""
-        snippet = text[:300]
+        # Use parent_text for richer context in snippet, fallback to child text
+        parent_text = h.get("parent_text") or ""
+        child_text = h.get("text") or ""
+        snippet_source = parent_text if parent_text else child_text
+        snippet = snippet_source[:300]
+        
         page = h.get("page") or 0
-        score = float(h.get("score") or 0.0)
+        raw_score = float(h.get("score") or 0.0)
+        # Convert cosine similarity (0.0-1.0) to percentage (0-100)
+        pct_score = max(0.0, min(100.0, raw_score * 100.0))
 
         results.append(
             SearchResult(
@@ -106,10 +112,13 @@ async def search_documents(
                 documentName=id_to_name[pdf_id],
                 pageNumber=page,
                 snippet=snippet,
-                confidenceScore=score,
+                confidenceScore=pct_score,
                 highlights=[],
             )
         )
+
+    # Sort by confidence descending
+    results.sort(key=lambda r: r.confidenceScore, reverse=True)
 
     duration = time.perf_counter() - start
 

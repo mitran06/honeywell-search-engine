@@ -53,6 +53,10 @@ search-engine/
    cd backend && pip install -r requirements.txt && uvicorn app.main:app --reload
    ```
 
+4. **Health checks:**
+   - API: http://localhost:8000/health
+   - Qdrant: http://localhost:8000/api/health/qdrant (verifies vector dim vs model)
+
 See [docs/SETUP.md](docs/SETUP.md) for detailed setup instructions.
 
 ## Team
@@ -65,6 +69,11 @@ See [docs/SETUP.md](docs/SETUP.md) for detailed setup instructions.
 - [Setup Guide](docs/SETUP.md) - How to set up the development environment
 - [API Documentation](docs/API.md) - Backend API endpoints and contracts
 - [Frontend Plan](plan.md) - Detailed frontend implementation plan
+
+Key endpoints:
+- `/api/documents` for uploads/listing
+- `/api/search` for semantic search (scoped to the authenticated user)
+- `/api/health/qdrant` to verify Qdrant collection dimensions
 
 ## License
 

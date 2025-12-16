@@ -2,8 +2,8 @@ from qdrant_client import QdrantClient
 from qdrant_client.models import VectorParams, Distance
 from app.config import settings
 
-COLLECTION_NAME = "pdf_chunks"
-VECTOR_SIZE = 384  # ✅ MUST match all-MiniLM-L6-v2
+COLLECTION_NAME = settings.qdrant_collection
+VECTOR_SIZE = settings.embedding_dim  # must align with embedding model
 
 client = QdrantClient(
     host=settings.qdrant_host,

@@ -25,6 +25,11 @@ class Settings(BaseSettings):
     qdrant_host: str = "localhost"
     qdrant_port: int = 6333
 
+    # Embeddings
+    embedding_model_name: str = "sentence-transformers/all-MiniLM-L6-v2"
+    embedding_dim: int = 384
+    qdrant_collection: str = "pdf_chunks"
+
     
     class Config:
         env_file = ".env"

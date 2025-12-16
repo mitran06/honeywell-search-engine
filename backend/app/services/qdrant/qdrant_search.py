@@ -27,25 +27,30 @@ def semantic_search(
         q_filter = Filter(should=[FieldCondition(key="pdf_id", match=MatchValue(value=pid)) for pid in pdf_ids])
 
     try:
-        results = qdrant.search(
+        results = qdrant.query_points(
             collection_name=COLLECTION_NAME,
-            query_vector=query_vector,
+            query=query_vector,
             limit=top_k,
             with_payload=True,
             query_filter=q_filter,
         )
+        # qdrant_client>=1.16 returns QueryResponse with .points
+        if hasattr(results, "points"):
+            results = results.points
     except Exception:
         logger.exception("Qdrant search failed")
         return []
 
     formatted = []
     for r in results:
+        payload = r.payload if hasattr(r, "payload") else {}
+        score = r.score if hasattr(r, "score") else r[1] if isinstance(r, tuple) and len(r) > 1 else None
         formatted.append({
-            "score": r.score,
-            "pdf_id": r.payload.get("pdf_id"),
-            "page": r.payload.get("page"),
-            "chunk_index": r.payload.get("chunk_index"),
-            "text": r.payload.get("text"),
+            "score": score,
+            "pdf_id": payload.get("pdf_id") if payload else None,
+            "page": payload.get("page") if payload else None,
+            "chunk_index": payload.get("chunk_index") if payload else None,
+            "text": payload.get("text") if payload else None,
         })
 
     return formatted

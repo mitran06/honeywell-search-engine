@@ -1,9 +1,16 @@
 import uuid
-from sqlalchemy import Integer, Text, ForeignKey, Boolean
+from enum import Enum
+from sqlalchemy import Integer, Text, ForeignKey, Boolean, String, Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.dialects.postgresql import UUID
 from app.database import Base
 from sqlalchemy import text
+
+
+class ChunkType(str, Enum):
+    """Chunk hierarchy type for parent-child chunking strategy."""
+    PARENT = "PARENT"   # Large context chunks (500+ words) for display/reranking
+    CHILD = "CHILD"     # Small chunks (100-150 words) for vector search
 
 
 class PDFChunk(Base):
@@ -15,7 +22,6 @@ class PDFChunk(Base):
         server_default=text("gen_random_uuid()"),
     )
 
-
     pdf_metadata_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("pdf_metadata.id", ondelete="CASCADE"),
@@ -23,11 +29,27 @@ class PDFChunk(Base):
         index=True
     )
 
+    # Parent-child relationship: child chunks link to their parent
+    parent_chunk_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("pdf_chunks.id", ondelete="CASCADE"),
+        nullable=True,  # NULL for parent chunks
+        index=True
+    )
+
+    chunk_type: Mapped[ChunkType] = mapped_column(
+        SQLEnum(ChunkType),
+        default=ChunkType.CHILD,
+        nullable=False
+    )
+
     page_num: Mapped[int] = mapped_column(
         Integer,
         nullable=False
     )
 
+    # For parents: sequential index of parent chunk
+    # For children: index within the parent
     chunk_index: Mapped[int] = mapped_column(
         Integer,
         nullable=False
@@ -39,6 +61,12 @@ class PDFChunk(Base):
     )
 
     length_chars: Mapped[int] = mapped_column(
+        Integer,
+        nullable=True
+    )
+
+    # Accurate token count using model tokenizer
+    token_count: Mapped[int] = mapped_column(
         Integer,
         nullable=True
     )

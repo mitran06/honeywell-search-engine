@@ -1,7 +1,9 @@
 from sentence_transformers import SentenceTransformer
 import asyncio
 
-_model = SentenceTransformer("all-MiniLM-L6-v2")
+from app.config import settings
+
+_model = SentenceTransformer(settings.embedding_model_name)
 
 
 def generate_embeddings(texts: list[str]) -> list[list[float]]:
