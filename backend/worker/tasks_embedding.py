@@ -42,6 +42,12 @@ def embed_pdf(pdf_id: str):
 
         if not rows:
             logger.info("No chunks to embed for %s", pdf_id)
+            # Mark as completed if everything is already embedded
+            db.execute(
+                text("UPDATE pdf_metadata SET status='COMPLETED' WHERE id=:id"),
+                {"id": pdf_id},
+            )
+            db.commit()
             return
 
         chunk_ids = []
@@ -55,7 +61,7 @@ def embed_pdf(pdf_id: str):
                 "pdf_id": pdf_id,
                 "page": r.page_num,
                 "chunk_index": r.chunk_index,
-                "text":r.chunk_text
+                "text": r.chunk_text,
             })
 
         embeddings = generate_embeddings(texts)

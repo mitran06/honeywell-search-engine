@@ -10,6 +10,7 @@ from app.schemas import ApiResponse
 from app.routers.auth import router as auth_router
 from app.routers.search_history import router as search_history_router
 from app.routers.upload_router import router as upload_router
+from app.routers.search import router as search_router
 
 
 @asynccontextmanager
@@ -54,6 +55,7 @@ async def http_exception_handler(request: Request, exc: HTTPException):
 app.include_router(auth_router, prefix="/api/auth")
 app.include_router(search_history_router, prefix="/api")
 app.include_router(upload_router, prefix="/api")
+app.include_router(search_router, prefix="/api")
 
 
 @app.get("/health")

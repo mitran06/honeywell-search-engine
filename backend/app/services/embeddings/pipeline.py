@@ -15,21 +15,28 @@ Session = async_sessionmaker(engine, expire_on_commit=False)
 async def run_embedding_pipeline(pdf_id: str):
     async with Session() as session:
         rows = await session.execute(
-            text("SELECT id, chunk_text FROM pdf_chunks WHERE pdf_metadata_id=:pid"),
+            text("SELECT id, chunk_text, page_num, chunk_index FROM pdf_chunks WHERE pdf_metadata_id=:pid"),
             {"pid": pdf_id}
         )
         chunks = rows.fetchall()
 
     vectors = []
-    for chunk_id, text_data in chunks:
+    payloads = []
+    for chunk_id, text_data, page_num, chunk_index in chunks:
         vector = await embed_text_async(text_data)
         vectors.append((chunk_id, vector))
+        payloads.append({
+            "pdf_id": pdf_id,
+            "page": page_num,
+            "chunk_index": chunk_index,
+            "text": text_data,
+        })
 
     ensure_collection()
 
     points = [
-        {"id": str(chunk_id), "vector": vector, "payload": {"pdf_id": pdf_id}}
-        for chunk_id, vector in vectors
+        {"id": str(vectors[i][0]), "vector": vectors[i][1], "payload": payloads[i]}
+        for i in range(len(vectors))
     ]
 
     upsert_points(points)

@@ -11,7 +11,7 @@ from app.models.user import User
 from app.models.search_history import SearchHistory
 
 
-router = APIRouter(prefix="/search-history", tags=["search-history"])
+router = APIRouter(prefix="/search", tags=["search-history"])
 
 
 class SearchHistoryItem(BaseModel):
@@ -32,7 +32,7 @@ class AddSearchRequest(BaseModel):
     query: str
 
 
-@router.get("", response_model=SearchHistoryResponse)
+@router.get("/history", response_model=SearchHistoryResponse)
 async def get_search_history(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -60,7 +60,7 @@ async def get_search_history(
     }
 
 
-@router.post("", status_code=status.HTTP_201_CREATED)
+@router.post("/history", status_code=status.HTTP_201_CREATED)
 async def add_search_history(
     request: AddSearchRequest,
     db: AsyncSession = Depends(get_db),
@@ -93,7 +93,7 @@ async def add_search_history(
     return {"success": True, "message": "Search added to history"}
 
 
-@router.delete("/{history_id}")
+@router.delete("/history/{history_id}")
 async def delete_search_history(
     history_id: UUID,
     db: AsyncSession = Depends(get_db),
@@ -119,7 +119,7 @@ async def delete_search_history(
     return {"success": True, "message": "History item deleted"}
 
 
-@router.delete("")
+@router.delete("/history")
 async def clear_search_history(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
