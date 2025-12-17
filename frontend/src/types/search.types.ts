@@ -19,6 +19,12 @@ export interface SearchResult {
   snippet: string;
   confidenceScore: number;
   highlights: TextHighlight[];
+  scores: {
+    fusion: number;
+    semantic: number;
+    lexical: number;
+    triple: number;
+  };
 }
 
 export interface SearchRequest {

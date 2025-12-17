@@ -14,7 +14,12 @@ from app.models.search_history import SearchHistory
 from app.models.user import User
 from app.schemas import ApiResponse
 from app.services.embeddings.embedder import embed_query
-from app.services.qdrant.qdrant_search import semantic_search
+from app.services.search.fusion import (
+    semantic_channel,
+    lexical_channel,
+    triple_channel,
+    fuse_results,
+)
 
 
 router = APIRouter(prefix="/search", tags=["Search"])
@@ -47,6 +52,7 @@ class SearchResult(BaseModel):
     snippet: str
     confidenceScore: float
     highlights: List[TextHighlight]
+    scores: dict
 
 
 class SearchResponse(BaseModel):
@@ -85,39 +91,46 @@ async def search_documents(
     # Embed query
     query_vector = await embed_query(request.query)
 
-    # Qdrant search restricted to user's documents
-    hits = semantic_search(query_vector, top_k=request.limit, pdf_ids=allowed_ids)
+    # Channel searches
+    semantic_hits = semantic_channel(query_vector, allowed_ids)
+    lexical_hits = await lexical_channel(db, request.query, [uuid.UUID(pid) for pid in allowed_ids])
+    triple_hits = await triple_channel(db, request.query, [uuid.UUID(pid) for pid in allowed_ids])
+
+    fused = fuse_results(semantic_hits, lexical_hits, triple_hits, request.limit)
 
     results: List[SearchResult] = []
-    for h in hits:
+    for h in fused:
         pdf_id = h.get("pdf_id")
         if pdf_id not in id_to_name:
-            # Extra safety; skip results outside user scope
             continue
 
-        # Use parent_text for richer context in snippet, fallback to child text
         parent_text = h.get("parent_text") or ""
         child_text = h.get("text") or ""
         snippet_source = parent_text if parent_text else child_text
         snippet = snippet_source[:300]
-        
-        page = h.get("page") or 0
-        raw_score = float(h.get("score") or 0.0)
-        # Convert cosine similarity (0.0-1.0) to percentage (0-100)
-        pct_score = max(0.0, min(100.0, raw_score * 100.0))
+
+        fusion_score = float(h.get("fusion_score") or 0.0)
+        semantic_score = float(h.get("semantic_score") or 0.0)
+        lexical_score = float(h.get("lexical_score") or 0.0)
+        triple_score = float(h.get("triple_score") or 0.0)
 
         results.append(
             SearchResult(
                 documentId=pdf_id,
                 documentName=id_to_name[pdf_id],
-                pageNumber=page,
+                pageNumber=h.get("page") or 0,
                 snippet=snippet,
-                confidenceScore=pct_score,
+                confidenceScore=max(0.0, min(100.0, fusion_score * 100.0)),
                 highlights=[],
+                scores={
+                    "fusion": fusion_score,
+                    "semantic": semantic_score,
+                    "lexical": lexical_score,
+                    "triple": triple_score,
+                },
             )
         )
 
-    # Sort by confidence descending
     results.sort(key=lambda r: r.confidenceScore, reverse=True)
 
     duration = time.perf_counter() - start

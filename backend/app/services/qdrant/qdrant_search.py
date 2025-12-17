@@ -47,6 +47,7 @@ def semantic_search(
         score = r.score if hasattr(r, "score") else r[1] if isinstance(r, tuple) and len(r) > 1 else None
         formatted.append({
             "score": score,
+            "chunk_id": payload.get("chunk_id") if payload else None,
             "pdf_id": payload.get("pdf_id") if payload else None,
             "page": payload.get("page") if payload else None,
             "chunk_index": payload.get("chunk_index") if payload else None,

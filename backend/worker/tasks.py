@@ -7,7 +7,7 @@ import tempfile
 import os
 import re
 import logging
-from typing import List, Tuple
+from typing import List, Tuple, Iterable
 
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
@@ -81,6 +81,29 @@ def regex_clean(text: str) -> str:
     text = _NON_PRINTABLE_PATTERN.sub(" ", text)
     text = _WHITESPACE_PATTERN.sub(" ", text)
     return text.strip()
+
+
+def extract_naive_triples(text: str, limit: int = 3) -> List[Tuple[str, str, str]]:
+    """Very lightweight triple extraction fallback.
+
+    This avoids heavyweight OpenIE deps; it simply takes the first token as
+    subject, second as predicate, and the remainder as object for the first
+    few sentences. It is intentionally naive but gives us relation hooks for
+    filtering/ranking while keeping the worker fast.
+    """
+    triples: List[Tuple[str, str, str]] = []
+    sentences = re.split(r"[.!?]\s+", text)
+    for sent in sentences:
+        tokens = sent.strip().split()
+        if len(tokens) < 3:
+            continue
+        subj = tokens[0]
+        pred = tokens[1]
+        obj = " ".join(tokens[2:])
+        triples.append((subj, pred, obj))
+        if len(triples) >= limit:
+            break
+    return triples
 
 _spacy_nlp = None
 def init_spacy():
@@ -182,12 +205,13 @@ def process_pdf(pdf_id: str, object_key: str, use_spacy: bool = False):
                 
                 parent_db_id = parent_db_ids.get(child.parent_index)
                 
-                db.execute(
+                child_result = db.execute(
                     text("""
                         INSERT INTO pdf_chunks
                         (pdf_metadata_id, page_num, chunk_index, chunk_text,
                          length_chars, token_count, chunk_type, parent_chunk_id)
                         VALUES (:pid, :pg, :idx, :txt, :len, :tokens, 'CHILD', :parent_id)
+                        RETURNING id
                     """),
                     {
                         "pid": pdf_id,
@@ -199,6 +223,26 @@ def process_pdf(pdf_id: str, object_key: str, use_spacy: bool = False):
                         "parent_id": parent_db_id,
                     }
                 )
+                child_chunk_id = child_result.fetchone()[0]
+
+                # Naive OIE triples for this child chunk
+                for (subj, pred, obj) in extract_naive_triples(child.text):
+                    db.execute(
+                        text("""
+                            INSERT INTO pdf_triples
+                            (pdf_metadata_id, chunk_id, page_num, chunk_index, subject, predicate, object)
+                            VALUES (:pid, :cid, :pg, :idx, :subj, :pred, :obj)
+                        """),
+                        {
+                            "pid": pdf_id,
+                            "cid": child_chunk_id,
+                            "pg": page_num,
+                            "idx": child.index,
+                            "subj": subj,
+                            "pred": pred,
+                            "obj": obj,
+                        }
+                    )
                 inserts += 1
                 
             if inserts % 100 == 0:

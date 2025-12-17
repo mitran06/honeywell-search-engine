@@ -63,6 +63,7 @@ def embed_pdf(pdf_id: str):
             chunk_ids.append(r.id)          # keep UUID type
             texts.append(r.chunk_text)
             payloads.append({
+                "chunk_id": str(r.id),
                 "pdf_id": pdf_id,
                 "page": r.page_num,
                 "chunk_index": r.chunk_index,

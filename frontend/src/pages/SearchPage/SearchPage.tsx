@@ -55,6 +55,8 @@ export function SearchPage() {
     navigate(`/viewer/${result.documentId}?page=${result.pageNumber}`);
   };
 
+  const formatPct = (value: number) => `${Math.round(value * 100)}%`;
+
   return (
     <>
       <Header />
@@ -113,6 +115,20 @@ export function SearchPage() {
                         <span className={styles.pageNumber}>Page {result.pageNumber}</span>
                       </div>
                       <p className={styles.snippet}>{result.snippet}</p>
+                      <div className={styles.scoreBreakdown}>
+                        <span className={styles.scoreChip}>
+                          Fusion {formatPct(result.scores.fusion)}
+                        </span>
+                        <span className={styles.scoreChip}>
+                          Semantic {formatPct(result.scores.semantic)}
+                        </span>
+                        <span className={styles.scoreChip}>
+                          Lexical {formatPct(result.scores.lexical)}
+                        </span>
+                        <span className={styles.scoreChip}>
+                          Triple {formatPct(result.scores.triple)}
+                        </span>
+                      </div>
                     </div>
                     <div className={styles.confidenceScore}>
                       <span className={`${styles.scoreValue} ${getScoreClass(result.confidenceScore)}`}>
