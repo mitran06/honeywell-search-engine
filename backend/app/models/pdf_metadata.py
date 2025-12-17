@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime
 from enum import Enum
 from sqlalchemy import String, DateTime, Integer, Text, Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column
@@ -7,12 +7,12 @@ from sqlalchemy.dialects.postgresql import UUID
 from app.database import Base
 
 
+
 class ProcessingStatus(str, Enum):
     PENDING = "PENDING"
     PROCESSING = "PROCESSING"
     COMPLETED = "COMPLETED"
     FAILED = "FAILED"
-    EMBED_FAILED = "EMBED_FAILED"
 
 
 class PDFMetadata(Base):
@@ -37,7 +37,6 @@ class PDFMetadata(Base):
         nullable=True,
     )
     page_count: Mapped[int] = mapped_column(
-        Integer,
         nullable=True,
     )
     status: Mapped[ProcessingStatus] = mapped_column(
@@ -54,13 +53,13 @@ class PDFMetadata(Base):
         nullable=True,  # Optional: link to user who uploaded
     )
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
+        DateTime,
+        default=datetime.utcnow,
         nullable=False,
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc),
+        DateTime,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
         nullable=False,
     )

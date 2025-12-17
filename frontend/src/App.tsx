@@ -2,6 +2,9 @@ import { RouterProvider } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { router } from './routes';
+import { loadTheme } from "@/utils/theme";
+
+loadTheme();
 
 function App() {
   return (

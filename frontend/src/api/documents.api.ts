@@ -1,67 +1,73 @@
-import apiClient from './client';
-import type { 
-  ApiResponse, 
-  Document, 
-  DocumentListResponse, 
-  DocumentListParams,
-  DocumentUploadResponse,
-  DocumentStatusResponse 
-} from '@/types';
+import { apiClient } from "@/api";
+import type { ApiResponse, Document } from "@/types";
+
+/**
+ * Authorization headers helper
+ */
+function authHeaders() {
+  const token = localStorage.getItem("access_token");
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
 
 export const documentsApi = {
-  getDocuments: async (params?: DocumentListParams): Promise<ApiResponse<DocumentListResponse>> => {
-    const response = await apiClient.get<ApiResponse<DocumentListResponse>>('/documents', { params });
-    return response.data;
-  },
+  // ------------------------------------------------------------------
+  // List PDFs
+  // ------------------------------------------------------------------
+  getDocuments: () =>
+    apiClient.get<ApiResponse<{ documents: Document[]; total: number }>>(
+      "/documents"
+    ),
 
-  getDocument: async (id: string): Promise<ApiResponse<Document>> => {
-    const response = await apiClient.get<ApiResponse<Document>>(`/documents/${id}`);
-    return response.data;
-  },
+  // ------------------------------------------------------------------
+  // Get single PDF metadata
+  // ------------------------------------------------------------------
+  getDocument: (id: string) =>
+    apiClient.get<ApiResponse<Document>>(`/documents/${id}`),
 
-  uploadDocuments: async (
-    files: File[],
-    onUploadProgress?: (progress: number) => void
-  ): Promise<ApiResponse<DocumentUploadResponse>> => {
+  // ------------------------------------------------------------------
+  // Fetch raw PDF blob (viewer)
+  // ------------------------------------------------------------------
+  getDocumentFile: (id: string) =>
+    apiClient
+      .get<Blob>(`/documents/${id}/file`, {
+        responseType: "blob",
+        headers: authHeaders(),
+      })
+      .then(res => res.data),
+
+  // ------------------------------------------------------------------
+  // Upload PDFs
+  // ------------------------------------------------------------------
+  uploadDocuments: (files: File[], onProgress?: (p: number) => void) => {
     const formData = new FormData();
-    files.forEach((file) => {
-      formData.append('files', file);
-    });
+    files.forEach(file => formData.append("files", file));
 
-    const response = await apiClient.post<ApiResponse<DocumentUploadResponse>>(
-      '/documents/upload',
+    return apiClient.post<ApiResponse>(
+      "/documents/upload",
       formData,
       {
         headers: {
-          'Content-Type': 'multipart/form-data',
+          "Content-Type": "multipart/form-data",
+          ...authHeaders(),
         },
-        onUploadProgress: (progressEvent) => {
-          if (progressEvent.total && onUploadProgress) {
-            const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-            onUploadProgress(progress);
+        onUploadProgress: evt => {
+          if (onProgress && evt.total) {
+            onProgress(Math.round((evt.loaded * 100) / evt.total));
           }
         },
       }
     );
-    return response.data;
   },
 
-  deleteDocument: async (id: string): Promise<ApiResponse<null>> => {
-    const response = await apiClient.delete<ApiResponse<null>>(`/documents/${id}`);
-    return response.data;
-  },
+  // ------------------------------------------------------------------
+  // Delete single PDF
+  // ------------------------------------------------------------------
+  deleteDocument: (id: string) =>
+    apiClient.delete<ApiResponse>(`/documents/${id}`),
 
-  getDocumentStatus: async (id: string): Promise<ApiResponse<DocumentStatusResponse>> => {
-    const response = await apiClient.get<ApiResponse<DocumentStatusResponse>>(`/documents/${id}/status`);
-    return response.data;
-  },
-
-  getDocumentFile: async (id: string): Promise<Blob> => {
-    const response = await apiClient.get(`/documents/${id}/file`, {
-      responseType: 'blob',
-    });
-    return response.data;
-  },
+  // ------------------------------------------------------------------
+  // Delete ALL PDFs (user scoped)
+  // ------------------------------------------------------------------
+  deleteAllDocuments: () =>
+    apiClient.delete<ApiResponse>("/documents"),
 };
-
-export default documentsApi;

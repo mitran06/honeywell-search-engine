@@ -1,62 +1,32 @@
 .header {
+  height: 64px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 64px;
-  padding: 0 var(--spacing-lg);
-  background-color: var(--color-bg-primary);
-  border-bottom: 1px solid var(--color-border);
+  padding: 0 20px;
+
+  /* THEME-AWARE */
+  background: var(--layout-bg);
+  color: var(--panel-text-primary);
+
   position: sticky;
   top: 0;
-  z-index: var(--z-dropdown);
+  z-index: 50;
+
+  /*box-shadow: 0 1px 0 var(--panel-border);*/
 }
 
 .logo {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  font-size: var(--font-size-xl);
-  font-weight: var(--font-weight-bold);
-  color: var(--color-primary);
-}
-
-.logoIcon {
-  width: 32px;
-  height: 32px;
-}
-
-.nav {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-md);
-}
-
-.navLink {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-xs);
-  padding: var(--spacing-sm) var(--spacing-md);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-secondary);
-  border-radius: var(--radius-md);
-  transition: all var(--transition-fast);
-}
-
-.navLink:hover {
-  color: var(--color-text-primary);
-  background-color: var(--color-bg-secondary);
-}
-
-.navLink.active {
-  color: var(--color-primary);
-  background-color: var(--color-bg-tertiary);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--panel-text-primary);
+  text-decoration: none;
 }
 
 .userSection {
   display: flex;
   align-items: center;
-  gap: var(--spacing-md);
+  gap: 8px;
 }
 
 .userMenu {
@@ -66,64 +36,99 @@
 .userButton {
   display: flex;
   align-items: center;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-xs) var(--spacing-sm);
-  border-radius: var(--radius-md);
-  transition: background-color var(--transition-fast);
+  gap: 10px;
+  padding: 6px 10px;
+
+  background: none;
+  border: none;
+  border-radius: 8px;
+
+  color: var(--panel-text-primary);
+  cursor: pointer;
 }
 
 .userButton:hover {
-  background-color: var(--color-bg-secondary);
+  background: var(--card-bg);
 }
 
 .avatar {
   width: 32px;
   height: 32px;
-  border-radius: var(--radius-full);
-  background-color: var(--color-primary);
-  color: var(--color-text-inverse);
+  border-radius: 50%;
+
+  background: var(--avatar-bg);
+  color: var(--avatar-text);
+
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-semibold);
+
+  font-weight: 600;
+  font-size: 13px;
 }
 
 .userName {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-primary);
+  font-size: 14px;
+  font-weight: 500;
 }
+
+/* =========================
+   DROPDOWN
+   ========================= */
 
 .dropdown {
   position: absolute;
-  top: calc(100% + var(--spacing-xs));
+  top: calc(100% + 8px);
   right: 0;
   min-width: 180px;
-  background-color: var(--color-bg-primary);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-lg);
-  overflow: hidden;
-  z-index: var(--z-dropdown);
+
+  background: var(--dropdown-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+  padding: 6px;
 }
 
 .dropdownItem {
+  width: 100%;
+  padding: 10px 14px;
+
   display: flex;
   align-items: center;
-  gap: var(--spacing-sm);
-  width: 100%;
-  padding: var(--spacing-sm) var(--spacing-md);
-  font-size: var(--font-size-sm);
-  color: var(--color-text-primary);
+  gap: 10px;
+
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+
   text-align: left;
-  transition: background-color var(--transition-fast);
+  cursor: pointer;
+
+  white-space: nowrap;
+
+  color: var(--panel-text-primary);
+  transition: background 150ms ease, color 150ms ease;
 }
 
+
+/* Hover */
 .dropdownItem:hover {
-  background-color: var(--color-bg-secondary);
+  background: var(--dropdown-item-hover);
 }
 
-.dropdownItem.danger {
-  color: var(--color-error);
+/* Active */
+.active {
+  background: var(--dropdown-item-active);
+  color: var(--dropdown-item-active-text);
+  font-weight: 600;
+}
+
+.active:hover {
+  background: var(--dropdown-item-active);
+}
+
+/* Danger action */
+.danger {
+  color: var(--danger);
 }
