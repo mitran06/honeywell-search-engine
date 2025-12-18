@@ -3,15 +3,18 @@
   --color-primary: #2C2C2A;
   --color-primary-light: #4A4A47;
   --color-primary-dark: #1A1A19;
+  --color-primary-alpha: rgba(44, 44, 42, 0.1);
 
   /* Background Colors */
   --color-bg-primary: #FFFFFF;
   --color-bg-secondary: #F5F5F5;
   --color-bg-tertiary: #EBEBEB;
+  --color-bg-hover: rgba(0, 0, 0, 0.04);
 
   /* Text Colors */
   --color-text-primary: #2C2C2A;
   --color-text-secondary: #6B6B6B;
+  --color-text-tertiary: #9B9B9B;
   --color-text-muted: #9B9B9B;
   --color-text-inverse: #FFFFFF;
 

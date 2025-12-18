@@ -12,12 +12,20 @@ from typing import List, Tuple, Iterable
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
-# Optional spaCy
+# Optional spaCy for better NLP
 try:
     import spacy
     _SPACY_AVAILABLE = True
 except Exception:
     _SPACY_AVAILABLE = False
+
+# Optional OCR support
+try:
+    import pytesseract
+    from pdf2image import convert_from_path
+    _OCR_AVAILABLE = True
+except Exception:
+    _OCR_AVAILABLE = False
 
 # ------------------------------------------------------
 # LOGGING
@@ -55,19 +63,65 @@ def download_from_minio(object_key: str, file_path: str):
         resp.close()
         resp.release_conn()
 
+
 # ------------------------------------------------------
-# PDF Functions
+# OCR Functions
 # ------------------------------------------------------
-def extract_text_pages(pdf_path: str) -> List[Tuple[int, str]]:
+def ocr_page_image(image) -> str:
+    """Run OCR on a PIL image."""
+    if not _OCR_AVAILABLE:
+        return ""
+    try:
+        return pytesseract.image_to_string(image, lang='eng')
+    except Exception as e:
+        logger.warning(f"OCR failed: {e}")
+        return ""
+
+
+def extract_text_with_ocr(pdf_path: str, page_num: int) -> str:
+    """Extract text from a PDF page using OCR (for scanned documents)."""
+    if not _OCR_AVAILABLE:
+        return ""
+    try:
+        # Convert specific page to image
+        images = convert_from_path(pdf_path, first_page=page_num, last_page=page_num, dpi=300)
+        if images:
+            return ocr_page_image(images[0])
+    except Exception as e:
+        logger.warning(f"OCR extraction failed for page {page_num}: {e}")
+    return ""
+
+
+# ------------------------------------------------------
+# PDF Functions with OCR fallback
+# ------------------------------------------------------
+def extract_text_pages(pdf_path: str, use_ocr_fallback: bool = True) -> List[Tuple[int, str]]:
+    """
+    Extract text from PDF pages.
+    Falls back to OCR for pages with little/no text (scanned documents).
+    """
     doc = fitz.open(pdf_path)
     pages = []
+    
     for i, page in enumerate(doc):
+        page_num = i + 1
         try:
             text = page.get_text()
         except Exception:
             text = ""
-        pages.append((i + 1, text))
-     return pages
+        
+        # OCR fallback for pages with very little text (likely scanned)
+        if use_ocr_fallback and len(text.strip()) < 50 and _OCR_AVAILABLE:
+            logger.info(f"Page {page_num} has little text, trying OCR...")
+            ocr_text = extract_text_with_ocr(pdf_path, page_num)
+            if len(ocr_text.strip()) > len(text.strip()):
+                text = ocr_text
+                logger.info(f"OCR extracted {len(text)} chars from page {page_num}")
+        
+        pages.append((page_num, text))
+    
+    doc.close()
+    return pages
 
 _HEADER_FOOTER_PATTERN = re.compile(
     r"(^\s*page\s*\d+\s*$)|(^\s*\d+\s*/\s*\d+\s*$)|(^\s*confidential\s*$)",
@@ -84,6 +138,109 @@ def regex_clean(text: str) -> str:
     text = _HYPHEN_BREAK_PATTERN.sub(r"\1\2", text)
     text = _WHITESPACE_PATTERN.sub(" ", text)
     return text.strip()
+
+
+# ------------------------------------------------------
+# Triple Extraction (OpenIE-style)
+# ------------------------------------------------------
+_spacy_nlp_full = None
+
+def _get_spacy_full():
+    """Load spaCy with full pipeline for dependency parsing."""
+    global _spacy_nlp_full
+    if _spacy_nlp_full is None and _SPACY_AVAILABLE:
+        try:
+            _spacy_nlp_full = spacy.load("en_core_web_sm")
+            logger.info("Loaded spaCy en_core_web_sm for triple extraction")
+        except Exception as e:
+            logger.warning(f"Could not load spaCy: {e}")
+            _spacy_nlp_full = "unavailable"
+    return _spacy_nlp_full if _spacy_nlp_full != "unavailable" else None
+
+
+def extract_triples_spacy(text: str, limit: int = 5) -> List[Tuple[str, str, str]]:
+    """
+    Extract subject-predicate-object triples using spaCy dependency parsing.
+    
+    This is a rule-based OpenIE approach that identifies:
+    - Subject: nsubj/nsubjpass of main verb
+    - Predicate: main verb (ROOT or with aux)
+    - Object: dobj/pobj/attr of verb
+    """
+    nlp = _get_spacy_full()
+    if not nlp:
+        return extract_naive_triples(text, limit)
+    
+    triples = []
+    
+    try:
+        doc = nlp(text[:5000])  # Limit to avoid memory issues
+        
+        for sent in doc.sents:
+            # Find main verb
+            root = None
+            for token in sent:
+                if token.dep_ == "ROOT" and token.pos_ == "VERB":
+                    root = token
+                    break
+            
+            if not root:
+                continue
+            
+            # Find subject
+            subject = None
+            for child in root.children:
+                if child.dep_ in ("nsubj", "nsubjpass"):
+                    # Get the full noun phrase
+                    subject = " ".join([t.text for t in child.subtree])
+                    break
+            
+            if not subject:
+                continue
+            
+            # Build predicate (verb + auxiliaries + particles)
+            predicate_parts = []
+            for child in root.children:
+                if child.dep_ in ("aux", "auxpass", "neg"):
+                    predicate_parts.append(child.text)
+            predicate_parts.append(root.text)
+            for child in root.children:
+                if child.dep_ == "prt":  # particle (e.g., "give up")
+                    predicate_parts.append(child.text)
+            predicate = " ".join(predicate_parts)
+            
+            # Find object
+            obj = None
+            for child in root.children:
+                if child.dep_ in ("dobj", "pobj", "attr", "acomp"):
+                    obj = " ".join([t.text for t in child.subtree])
+                    break
+            
+            # If no direct object, try prepositional objects
+            if not obj:
+                for child in root.children:
+                    if child.dep_ == "prep":
+                        for pobj in child.children:
+                            if pobj.dep_ == "pobj":
+                                obj = child.text + " " + " ".join([t.text for t in pobj.subtree])
+                                break
+                        if obj:
+                            break
+            
+            if obj and len(subject) > 1 and len(obj) > 1:
+                triples.append((subject.strip(), predicate.strip(), obj.strip()))
+                if len(triples) >= limit:
+                    break
+    
+    except Exception as e:
+        logger.warning(f"spaCy triple extraction failed: {e}")
+        return extract_naive_triples(text, limit)
+    
+    # Fallback to naive if no triples found
+    if not triples:
+        return extract_naive_triples(text, limit)
+    
+    return triples
 
 
 def extract_naive_triples(text: str, limit: int = 3) -> List[Tuple[str, str, str]]:
@@ -107,6 +264,14 @@ def extract_naive_triples(text: str, limit: int = 3) -> List[Tuple[str, str, str
         if len(triples) >= limit:
             break
     return triples
+
+
+def extract_triples(text: str, limit: int = 5) -> List[Tuple[str, str, str]]:
+    """Main entry point for triple extraction. Uses spaCy if available."""
+    if _SPACY_AVAILABLE:
+        return extract_triples_spacy(text, limit)
+    return extract_naive_triples(text, limit)
+
 
 _spacy_nlp = None
 def init_spacy():
@@ -228,8 +393,8 @@ def process_pdf(pdf_id: str, object_key: str, use_spacy: bool = False):
                 )
                 child_chunk_id = child_result.fetchone()[0]
 
-                # Naive OIE triples for this child chunk
-                for (subj, pred, obj) in extract_naive_triples(child.text):
+                # Extract triples using spaCy (with naive fallback)
+                for (subj, pred, obj) in extract_triples(child.text, limit=5):
                     db.execute(
                         text("""
                             INSERT INTO pdf_triples
