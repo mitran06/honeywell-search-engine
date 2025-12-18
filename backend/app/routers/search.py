@@ -96,7 +96,8 @@ async def search_documents(
     lexical_hits = await lexical_channel(db, request.query, [uuid.UUID(pid) for pid in allowed_ids])
     triple_hits = await triple_channel(db, request.query, [uuid.UUID(pid) for pid in allowed_ids])
 
-    fused = fuse_results(semantic_hits, lexical_hits, triple_hits, request.limit)
+    # Fuse with RRF and cross-encoder reranking
+    fused = fuse_results(semantic_hits, lexical_hits, triple_hits, request.limit, query=request.query)
 
     results: List[SearchResult] = []
     for h in fused:
@@ -104,15 +105,23 @@ async def search_documents(
         if pdf_id not in id_to_name:
             continue
 
-        parent_text = h.get("parent_text") or ""
-        child_text = h.get("text") or ""
-        snippet_source = parent_text if parent_text else child_text
-        snippet = snippet_source[:300]
+        # Use pre-computed snippet from fusion, fallback to truncation
+        snippet = h.get("snippet") or (h.get("parent_text") or h.get("text") or "")[:300]
 
         fusion_score = float(h.get("fusion_score") or 0.0)
         semantic_score = float(h.get("semantic_score") or 0.0)
         lexical_score = float(h.get("lexical_score") or 0.0)
         triple_score = float(h.get("triple_score") or 0.0)
+        rerank_score = h.get("rerank_score")
+
+        # Convert highlight dicts to TextHighlight objects
+        highlights = []
+        for hl in h.get("highlights", []):
+            highlights.append(TextHighlight(
+                text=hl.get("text", ""),
+                startOffset=hl.get("startOffset", 0),
+                endOffset=hl.get("endOffset", 0),
+            ))
 
         results.append(
             SearchResult(
@@ -121,12 +130,15 @@ async def search_documents(
                 pageNumber=h.get("page") or 0,
                 snippet=snippet,
                 confidenceScore=max(0.0, min(100.0, fusion_score * 100.0)),
-                highlights=[],
+                highlights=highlights,
                 scores={
                     "fusion": fusion_score,
                     "semantic": semantic_score,
                     "lexical": lexical_score,
                     "triple": triple_score,
+                    "rerank": rerank_score,
+                    "rrf": h.get("rrf_score"),
+                    "channels": h.get("channels", []),
                 },
             )
         )

@@ -6,6 +6,7 @@ python-dotenv>=1.0.0
 # Database & Async ORM
 sqlalchemy[asyncio]>=2.0.25
 asyncpg>=0.29.0
+psycopg2-binary>=2.9.9
 alembic>=1.13.1
 
 # Authentication
@@ -30,7 +31,15 @@ redis>=5.0.1
 # PDF Processing (PyMuPDF)
 pymupdf>=1.23.7
 
-# NLP (spaCy, optional but required for your cleaning pipeline)
+# OCR Support (for scanned PDFs)
+pytesseract>=0.3.10
+pdf2image>=1.16.3
+# Requires Tesseract installed: apt-get install tesseract-ocr
+# Windows: https://github.com/UB-Mannheim/tesseract/wiki
+# Also requires Poppler for pdf2image:
+# apt-get install poppler-utils OR download Windows binaries
+
+# NLP (spaCy for triple extraction and text processing)
 spacy>=3.7.2
 # spaCy model is installed separately:
 # python -m spacy download en_core_web_sm
@@ -44,3 +53,11 @@ sentence-transformers>=2.7.0
 
 # Tokenizer for accurate chunk sizing
 transformers>=4.36.0
+
+# Text cleaning
+ftfy>=6.1.3
+
+# Testing
+pytest>=8.0.0
+pytest-asyncio>=0.23.0
+httpx>=0.27.0

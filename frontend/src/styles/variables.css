@@ -1,219 +1,91 @@
 :root {
+  /* Primary Colors */
+  --color-primary: #2C2C2A;
+  --color-primary-light: #4A4A47;
+  --color-primary-dark: #1A1A19;
+  --color-primary-alpha: rgba(44, 44, 42, 0.1);
 
-   /* ---------- Spacing Scale ---------- */
-  --spacing-xs: 4px;
-  --spacing-sm: 8px;
-  --spacing-md: 16px;
-  --spacing-lg: 24px;
-  --spacing-xl: 32px;
-  --spacing-2xl: 48px;
+  /* Background Colors */
+  --color-bg-primary: #FFFFFF;
+  --color-bg-secondary: #F5F5F5;
+  --color-bg-tertiary: #EBEBEB;
+  --color-bg-hover: rgba(0, 0, 0, 0.04);
 
-  /* ---------- Border Radius ---------- */
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
-  --radius-full: 9999px;
+  /* Text Colors */
+  --color-text-primary: #2C2C2A;
+  --color-text-secondary: #6B6B6B;
+  --color-text-tertiary: #9B9B9B;
+  --color-text-muted: #9B9B9B;
+  --color-text-inverse: #FFFFFF;
 
-  /* ---------- Font Sizes ---------- */
-  --font-size-xs: 12px;
-  --font-size-sm: 14px;
-  --font-size-md: 16px;
-  --font-size-lg: 18px;
-  --font-size-xl: 20px;
-  --font-size-2xl: 24px;
+  /* Border Colors */
+  --color-border: #E0E0E0;
+  --color-border-focus: #2C2C2A;
 
-  /* ---------- Font Weights ---------- */
-  --font-weight-regular: 400;
+  /* Semantic Colors */
+  --color-success: #4CAF50;
+  --color-warning: #FF9800;
+  --color-error: #F44336;
+  --color-info: #2196F3;
+
+  /* Confidence Score Colors */
+  --color-score-high: #4CAF50;
+  --color-score-medium: #FF9800;
+  --color-score-low: #F44336;
+
+  /* Highlight Color */
+  --color-highlight: rgba(255, 235, 59, 0.4);
+
+  /* Font Family */
+  --font-family-primary: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-family-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+  /* Font Sizes */
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.875rem;
+  --font-size-base: 1rem;
+  --font-size-lg: 1.125rem;
+  --font-size-xl: 1.25rem;
+  --font-size-2xl: 1.5rem;
+  --font-size-3xl: 1.875rem;
+
+  /* Font Weights */
+  --font-weight-normal: 400;
   --font-weight-medium: 500;
   --font-weight-semibold: 600;
   --font-weight-bold: 700;
 
-  /* ---------- Shadows ---------- */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
-  --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.12);
+  /* Line Heights */
+  --line-height-tight: 1.25;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.75;
 
-  /* ---------- Transitions ---------- */
+  /* Spacing */
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+  --spacing-2xl: 3rem;
+
+  /* Border Radius - Keep minimal for professional look */
+  --radius-sm: 2px;
+  --radius-md: 2px;
+  --radius-lg: 2px;
+  --radius-full: 9999px;
+
+  /* Shadows - Disabled for cleaner look */
+  --shadow-sm: none;
+  --shadow-md: none;
+  --shadow-lg: none;
+
+  /* Transitions */
   --transition-fast: 150ms ease;
   --transition-normal: 250ms ease;
+  --transition-slow: 350ms ease;
 
-  /* ---------- Backgrounds ---------- */
-  --color-bg-primary: #ffffff;
-  --color-bg-secondary: #f5f5f5;
-  --color-bg-tertiary: #ebebeb;
-
-  /* ---------- Text ---------- */
-  --color-text-primary: #2c2c2a;
-  --color-text-secondary: #6b6b6b;
-  --color-text-muted: #9b9b9b;
-  --color-text-inverse: #ffffff;
-
-  /* ---------- Borders ---------- */
-  --color-border: #e0e0e0;
-
-  /* ---------- Primary ---------- */
-  --color-primary: #2c2c2a;
-
-  /* ---------- Fonts ---------- */
-  --font-family-primary: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --font-family-mono: "JetBrains Mono", monospace;
-
-  /* ---------- Dropdown ---------- */
-  --dropdown-bg: var(--color-bg-secondary);
-  --dropdown-item-hover: var(--color-bg-tertiary);
-  --dropdown-item-active: var(--color-primary);
-  --dropdown-item-active-text: var(--color-text-inverse);
-
-  /* ---------- Layout / Panels ---------- */
-  --layout-bg: var(--color-bg-primary);
-
-  --panel-bg: var(--color-bg-secondary);
-  --panel-border: var(--color-border);
-  --panel-shadow: 0 0 0 1px var(--color-border);
-
-  --panel-text-primary: var(--color-text-primary);
-  --panel-text-muted: var(--color-text-muted);
-
-  --card-bg: var(--color-bg-tertiary);
-
-  /* ---------- Accent / Gradients ---------- */
-  --accent-gradient: linear-gradient(135deg, #ffffff 0%, #ffffff 100%);
-  --accent-gradient-soft: linear-gradient(135deg, #f1f5ff 0%, #fdf2f8 100%);
-  --accent-gradient-strong: linear-gradient(135deg, #c7d2fe 0%, #f9a8d4 100%);
-
-  /* ---------- Inputs ---------- */
-  --input-bg: #ffffff;
-  --input-border: var(--color-border);
-
-  /* ---------- Left panel docs ---------- */
-  --doc-card-bg: var(--card-bg);
-  --doc-card-hover: var(--color-bg-secondary);
-
-  --doc-title: var(--panel-text-primary);
-  --doc-meta: var(--panel-text-muted);
-
-  /* ---------- Utilities ---------- */
-  --danger: #ef4444;
-
-  /* ---------- Text overflow helpers ---------- */
-  --text-ellipsis-lines-1: 1;
-  --text-ellipsis-lines-2: 2;
+  /* Z-Index */
+  --z-dropdown: 100;
+  --z-modal: 200;
+  --z-toast: 300;
 }
-
-/* DARK THEME */
-
-[data-theme="dark"] {
-  --color-bg-primary: #0f1115;
-  --color-bg-secondary: #16181d;
-  --color-bg-tertiary: #1c1f26;
-
-  --color-text-primary: #e6e8eb;
-  --color-text-secondary: #9aa0aa;
-  --color-text-muted: #6b7280;
-
-  --color-border: #262a33;
-  --color-primary: #6f6f6f;
-
-  --dropdown-item-hover: #1f2937;
-  --dropdown-item-active: #6b7280;
-
-  --panel-bg: #16181d;
-  --panel-border: #262a33;
-  --panel-shadow: 0 0 0 1px #262a33;
-
-  --card-bg: #1c1f26;
-
-  --accent-gradient: linear-gradient(135deg, #0c0c0c 0%, #000000 100%);
-  --accent-gradient-soft: linear-gradient(135deg, #120f53 0%, #2b1b5e 100%);
-  --accent-gradient-strong: linear-gradient(135deg, #120f53 0%, #cc4b87 100%);
-
-  --cta-gradient: linear-gradient(135deg,  #000000 20%, #000000 80%);
-
-  --input-bg: #1c1f26;
-  --input-border: #262a33;
-
-  --doc-card-hover: #20242d;
-}
-
-/* BLUE–PINK THEME */
-
-[data-theme="blue-pink"] {
-  --color-bg-primary: #0b1020;
-  --color-bg-secondary: #151c33;
-  --color-bg-tertiary: #1e1b4b;
-
-  --color-text-primary: #e0e7ff;
-  --color-text-secondary: #c7d2fe;
-  --color-text-muted: #a5b4fc;
-
-  --color-border: #0b1020;
-  --color-primary: #b7639a;
-
-  --dropdown-item-hover: #1e1b4b;
-  --dropdown-item-active: #b7639a;
-
-  --panel-bg:  linear-gradient(135deg, #050327 30%, #122c4a 100%);
-  --panel-border: #312e81;
-
-  --card-bg: #1e1b4b;
-
-  --accent-gradient: linear-gradient(135deg, #120f53 20%, #b7639a 80%);
-  --accent-gradient-soft: linear-gradient(135deg, #1e1b4b 20%, #b7639a 80%);
-  --accent-gradient-strong: linear-gradient(135deg, #1e1b4b 20%, #b7639a 80%);
-
-    --cta-gradient: linear-gradient(135deg,  #120f53 20%, #b7639a 80%);
-
-  --input-bg: #1e1b4b;
-  --input-border: #122c4a;
-
-  --doc-card-hover: #2b235a;
-}
-
-/* CUSTOM THEME */
-
-[data-theme="custom"] {
-  --color-bg-primary: #111111;
-  --color-bg-secondary: #181818;
-  --color-bg-tertiary: #202020;
-
-  --color-text-primary: #ffffff;
-  --color-text-secondary: #bbbbbb;
-  --color-text-muted: #888888;
-
-  --color-border: #2a2a2a;
-  --color-primary:  #4b4b4b;
-
-  --dropdown-item-hover: #202020;
-  --dropdown-item-active: #484b4a;
-  --dropdown-item-active-text: #000000;
-
-  --panel-bg: linear-gradient(0deg, #000000 0%,  #4b4b4b 100%);
-  --panel-border: #2a2a2a;
-
-  --card-bg: #202020;
-
-  --accent-gradient: linear-gradient(135deg, #000000 0%,  #626463 100%);
-  --accent-gradient-soft: linear-gradient(135deg, #0f2f2b 0%, #00bfa6 100%);
-  --accent-gradient-strong: linear-gradient(135deg, #005f56 0%, #00ffcc);
-
-   --cta-gradient: linear-gradient(135deg,  #000000 0%,  #626463 100%);
-
-
-  --input-bg: #202020;
-  --input-border: #2a2a2a;
-
-  --doc-card-hover: #262626;
-
-    --avatar-bg: var(--accent-gradient);
-  --avatar-text: var(--color-text-inverse);
-}
-
-[data-theme="light"] {
-  --avatar-bg: linear-gradient(135deg, #1e293b 0%, #334155 100%);
-  --avatar-text: #ffffff;
-}
-
-[data-theme="custom"] {
-  --avatar-text: #000000;
-}
-
