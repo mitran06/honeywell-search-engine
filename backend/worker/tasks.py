@@ -67,7 +67,7 @@ def extract_text_pages(pdf_path: str) -> List[Tuple[int, str]]:
         except Exception:
             text = ""
         pages.append((i + 1, text))
-    return pages
+     return pages
 
 _HEADER_FOOTER_PATTERN = re.compile(
     r"(^\s*page\s*\d+\s*$)|(^\s*\d+\s*/\s*\d+\s*$)|(^\s*confidential\s*$)",

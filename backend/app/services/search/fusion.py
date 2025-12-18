@@ -79,18 +79,35 @@ async def lexical_channel(db: AsyncSession, query: str, pdf_ids: Sequence[UUID])
             "lexical_score": float(r.lexical_score or 0.0),
         })
 
-    # Exact-phrase fallback using ILIKE to catch OCR line-breaks/hyphenation issues
-    phrase = " ".join(query.split())  # normalize whitespace only
-    phrase_sql = text(
-        """
-        SELECT id, pdf_metadata_id, page_num, chunk_index, chunk_text
-        FROM pdf_chunks
-        WHERE pdf_metadata_id = ANY(:ids)
-          AND lower(regexp_replace(chunk_text, '(\\w)-\\s+(\\w)', '\\1\\2', 'g')) LIKE lower(:pattern)
-        LIMIT :limit
-        """
-    )
-    phrase_rows = (await db.execute(phrase_sql, {"ids": list(pdf_ids), "pattern": f"%{phrase}%", "limit": 10})).fetchall()
+        # Exact / loose phrase fallback to surface literal matches even if tsquery is weak
+        phrase = " ".join(query.split())  # normalize whitespace only
+
+        # Strict phrase (after de-hyphenation)
+        phrase_sql = text(
+                """
+                SELECT id, pdf_metadata_id, page_num, chunk_index, chunk_text
+                FROM pdf_chunks
+                WHERE pdf_metadata_id = ANY(:ids)
+                    AND lower(regexp_replace(chunk_text, '(\\w)-\\s+(\\w)', '\\1\\2', 'g')) LIKE lower(:pattern)
+                LIMIT :limit
+                """
+        )
+        phrase_rows = (await db.execute(phrase_sql, {"ids": list(pdf_ids), "pattern": f"%{phrase}%", "limit": 10})).fetchall()
+
+        # Loose wildcard match to tolerate extra tokens (e.g., stopwords) between keywords
+        wildcard = "%".join(phrase.split())
+        loose_sql = text(
+                """
+                SELECT id, pdf_metadata_id, page_num, chunk_index, chunk_text
+                FROM pdf_chunks
+                WHERE pdf_metadata_id = ANY(:ids)
+                    AND lower(regexp_replace(chunk_text, '(\\w)-\\s+(\\w)', '\\1\\2', 'g')) LIKE lower(:pattern)
+                LIMIT :limit
+                """
+        )
+        loose_rows = (await db.execute(loose_sql, {"ids": list(pdf_ids), "pattern": f"%{wildcard}%", "limit": 10})).fetchall()
+
+        phrase_rows.extend(loose_rows)
     seen = {r["chunk_id"] for r in results}
     for r in phrase_rows:
         cid = str(r.id)
