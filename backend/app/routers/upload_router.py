@@ -1,5 +1,9 @@
+<<<<<<< Updated upstream
 from fastapi import APIRouter, UploadFile, File, Depends, HTTPException
 from fastapi.responses import StreamingResponse
+=======
+from fastapi import APIRouter, UploadFile, File, Depends
+>>>>>>> Stashed changes
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from minio import Minio
@@ -7,18 +11,19 @@ from minio.error import S3Error
 from app.config import settings
 from app.database import get_db
 from app.models import PDFMetadata, ProcessingStatus
+<<<<<<< Updated upstream
 from app.models.user import User
 from app.schemas import ApiResponse
 from app.dependencies import get_current_user
 from worker.tasks import process_pdf
+=======
+from app.schemas import ApiResponse
+from worker.tasks import process_pdf   # ✅ IMPORTANT
+>>>>>>> Stashed changes
 import uuid
-from typing import List
 
 router = APIRouter(prefix="/documents", tags=["Documents"])
 
-# -------------------------
-# MinIO client
-# -------------------------
 minio_client = Minio(
     settings.minio_endpoint,
     access_key=settings.minio_access_key,
@@ -26,14 +31,11 @@ minio_client = Minio(
     secure=False
 )
 
-
 def ensure_bucket_exists():
-    try:
-        if not minio_client.bucket_exists(settings.minio_bucket):
-            minio_client.make_bucket(settings.minio_bucket)
-    except S3Error as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    if not minio_client.bucket_exists(settings.minio_bucket):
+        minio_client.make_bucket(settings.minio_bucket)
 
+<<<<<<< Updated upstream
 
 async def cleanup_orphaned_file(object_key: str):
     try:
@@ -42,14 +44,19 @@ async def cleanup_orphaned_file(object_key: str):
         pass
 
 
+=======
+# -------------------------
+# UPLOAD PDFs
+# -------------------------
+>>>>>>> Stashed changes
 @router.post("/upload")
-async def upload_pdfs(
-    files: List[UploadFile] = File(...),
+async def upload_documents(
+    files: list[UploadFile] = File(...),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
 ):
     """Upload PDF files, persist metadata, and enqueue processing."""
     ensure_bucket_exists()
+<<<<<<< Updated upstream
 
     results = []
     errors = []
@@ -60,13 +67,18 @@ async def upload_pdfs(
             errors.append({"filename": file.filename or "unknown", "error": "Only PDF files are allowed"})
             continue
 
+=======
+    uploaded = []
+
+    for file in files:
+>>>>>>> Stashed changes
         object_key = f"{uuid.uuid4()}_{file.filename}"
 
-        try:
-            file.file.seek(0, 2)
-            file_size = file.file.tell()
-            file.file.seek(0)
+        file.file.seek(0, 2)
+        size = file.file.tell()
+        file.file.seek(0)
 
+<<<<<<< Updated upstream
             minio_client.put_object(
                 settings.minio_bucket,
                 object_key,
@@ -75,18 +87,27 @@ async def upload_pdfs(
                 content_type="application/pdf",
             )
             uploaded_keys.append(object_key)
+=======
+        minio_client.put_object(
+            settings.minio_bucket,
+            object_key,
+            file.file,
+            length=size,
+            content_type="application/pdf",
+        )
+>>>>>>> Stashed changes
 
-            pdf = PDFMetadata(
-                filename=file.filename,
-                object_key=object_key,
-                file_size=file_size,
-                status=ProcessingStatus.PENDING,
-                uploaded_by=current_user.id,
-            )
+        pdf = PDFMetadata(
+            filename=file.filename,
+            object_key=object_key,
+            file_size=size,
+            status=ProcessingStatus.PENDING,
+git         )
 
-            db.add(pdf)
-            await db.flush()
+        db.add(pdf)
+        await db.flush()
 
+<<<<<<< Updated upstream
             # Trigger async processing pipeline
             process_pdf.delay(str(pdf.id), object_key)
 
@@ -102,6 +123,16 @@ async def upload_pdfs(
             # Best-effort cleanup if any step fails
             await cleanup_orphaned_file(object_key)
             errors.append({"filename": file.filename, "error": str(e)})
+=======
+        # 🔥 THIS IS THE MISSING LINE (CHUNKING STARTS HERE)
+        process_pdf.delay(str(pdf.id), object_key)
+
+        uploaded.append({
+            "id": str(pdf.id),
+            "filename": pdf.filename,
+            "status": pdf.status.value,
+        })
+>>>>>>> Stashed changes
 
     try:
         await db.commit()
@@ -112,6 +143,7 @@ async def upload_pdfs(
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
     return ApiResponse(
+<<<<<<< Updated upstream
         success=len(results) > 0,
         data={
             "uploaded": results,
@@ -302,4 +334,36 @@ async def delete_document(
         success=True,
         data=None,
         message="Document deleted successfully",
+=======
+        success=True,
+        data={"documents": uploaded},
+        message="Uploaded successfully"
+    )
+
+# -------------------------
+# LIST DOCUMENTS (NO AUTH)
+# -------------------------
+@router.get("")
+async def list_documents(db: AsyncSession = Depends(get_db)):
+    result = await db.execute(
+        select(PDFMetadata).order_by(PDFMetadata.created_at.desc())
+    )
+    docs = result.scalars().all()
+
+    return ApiResponse(
+        success=True,
+        data={
+            "documents": [
+                {
+                    "id": str(d.id),
+                    "filename": d.filename,
+                    "file_size": d.file_size,
+                    "status": d.status.value,
+                    "created_at": d.created_at.isoformat(),
+                }
+                for d in docs
+            ]
+        },
+        message=None
+>>>>>>> Stashed changes
     )
