@@ -289,34 +289,71 @@ async def lexical_channel(db: AsyncSession, query: str, pdf_ids: Sequence[UUID])
     return results
 
 
-async def triple_channel(db: AsyncSession, query: str, pdf_ids: Sequence[UUID]) -> List[Dict]:
-    """Search extracted triples for relation-aware matching."""
+async def triple_channel(
+    db: AsyncSession,
+    query: str,
+    pdf_ids: Sequence[UUID],
+) -> List[Dict]:
+    """
+    Improved OIE search:
+    - OR-based term matching
+    - Weighted triple_tsv (subject > predicate > object)
+    - Aggregated per chunk
+    """
+
+    # Tokenize query: keep meaningful terms only
+    terms = [w for w in query.lower().split() if len(w) > 2]
+    if not terms:
+        return []
+
+    # OR-based tsquery: term1 | term2 | term3
+    ts_query = " | ".join(terms)
+
     sql = text(
         """
-        SELECT t.chunk_id, t.pdf_metadata_id, t.page_num, t.chunk_index,
-               c.chunk_text,
-               ts_rank_cd(t.triple_tsv, plainto_tsquery('english', :q)) AS triple_score
+        SELECT
+            t.chunk_id,
+            t.pdf_metadata_id,
+            t.page_num,
+            t.chunk_index,
+            MAX(ts_rank_cd(t.triple_tsv, to_tsquery('english', :tsq))) AS triple_score,
+            c.chunk_text
         FROM pdf_triples t
         JOIN pdf_chunks c ON c.id = t.chunk_id
         WHERE t.pdf_metadata_id = ANY(:ids)
-          AND t.triple_tsv @@ plainto_tsquery('english', :q)
+          AND t.triple_tsv @@ to_tsquery('english', :tsq)
+        GROUP BY t.chunk_id, t.pdf_metadata_id, t.page_num, t.chunk_index, c.chunk_text
         ORDER BY triple_score DESC
         LIMIT :limit
         """
     )
-    rows = (await db.execute(sql, {"q": query, "ids": list(pdf_ids), "limit": TRIPLE_K})).fetchall()
-    
+
+    rows = (
+        await db.execute(
+            sql,
+            {
+                "tsq": ts_query,
+                "ids": list(pdf_ids),
+                "limit": TRIPLE_K,
+            },
+        )
+    ).fetchall()
+
     results = []
     for rank, r in enumerate(rows):
-        results.append({
-            "chunk_id": str(r.chunk_id),
-            "pdf_id": str(r.pdf_metadata_id),
-            "page": r.page_num,
-            "chunk_index": r.chunk_index,
-            "text": r.chunk_text,
-            "triple_score": float(r.triple_score or 0.0),
-            "triple_rank": rank + 1,
-        })
+        results.append(
+            {
+                "chunk_id": str(r.chunk_id),
+                "pdf_id": str(r.pdf_metadata_id),
+                "page": r.page_num,
+                "chunk_index": r.chunk_index,
+                "text": r.chunk_text,
+                # Normalize lightly for UI (still raw-ish)
+                "triple_score": float(r.triple_score or 0.0),
+                "triple_rank": rank + 1,
+            }
+        )
+
     return results
 
 
@@ -534,11 +571,25 @@ def fuse_results(
     # Re-sort after deduplication
     fused.sort(key=lambda x: x.get("fusion_score", 0), reverse=True)
     
-    # Normalize fusion scores to [0, 1] for confidence display
-    max_score = max((r.get("fusion_score", 0) for r in fused), default=1.0)
-    if max_score > 0:
+
+    # Normalize fusion score (overall ranking confidence)
+    max_fusion = max((r.get("fusion_score", 0) for r in fused), default=1.0)
+    if max_fusion > 0:
         for r in fused:
-            r["fusion_score"] = r["fusion_score"] / max_score
+            r["fusion_score"] = r["fusion_score"] / max_fusion
+
+    # Normalize OIE (triple) scores separately
+    # This makes OIE % interpretable and stable
+    max_triple = max((r.get("triple_score", 0) for r in fused), default=0.0)
+
+    if max_triple > 0:
+        for r in fused:
+            r["triple_score"] = r.get("triple_score", 0) / max_triple
+    else:
+        # Explicitly zero when no OIE evidence exists
+        for r in fused:
+            r["triple_score"] = 0.0
+
     
     # Extract snippets and highlights
     for r in fused[:limit]:

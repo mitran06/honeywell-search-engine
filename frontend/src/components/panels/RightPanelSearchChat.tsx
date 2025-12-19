@@ -1,116 +1,128 @@
-import React, { useEffect, useState } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
-import { HiSearch } from "react-icons/hi";
-import { searchApi } from "@/api";
-import { Loader } from "@/components/common";
-import type { SearchResult } from "@/types";
+import { useState, useRef } from "react"
+import { HiSearch } from "react-icons/hi"
+import { searchDocuments } from "@/api/search.api"
+import { SearchResults } from "../search/SearchResults"
+import type { SearchResult } from "@/types"
 
-export function RightPanelSearchChat({
-  openDocument,
-}: {
-  openDocument?: (id: string, page?: number) => void;
-}) {
-  const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
+interface Props {
+  onOpenResult: (documentId: string, page: number) => void
+}
 
-  const initialQuery = searchParams.get("q") || "";
-  const [query, setQuery] = useState(initialQuery);
+export function RightPanelSearchChat({ onOpenResult }: Props) {
+  const [query, setQuery] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [results, setResults] = useState<SearchResult[]>([])
+  const [error, setError] = useState<string | null>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
 
-  const [results, setResults] = useState<SearchResult[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [hasSearched, setHasSearched] = useState(false);
+  const handleSearch = async () => {
+    if (!query.trim()) return
 
-  const runSearch = async (text: string) => {
-    if (!text.trim()) return;
-    setIsLoading(true);
-    setHasSearched(true);
-    const res = await searchApi.search({ query: text.trim(), limit: 20 });
-    setResults(res.data.results);
-    setIsLoading(false);
-  };
+    setLoading(true)
+    setError(null)
 
-  useEffect(() => {
-    if (initialQuery) runSearch(initialQuery);
-  }, [initialQuery]);
+    try {
+      const data = await searchDocuments(query, 5)
+      setResults(data.results)
+    } catch (err) {
+      console.error("Search failed:", err)
+      setResults([])
+      setError("Search failed")
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <div
       style={{
-        padding: 16,
         height: "100%",
         display: "flex",
         flexDirection: "column",
-        background: "var(--panel-bg)",
-        color: "var(--panel-text-primary)",
       }}
     >
-      {/* Header */}
-      <div
-        style={{
-          borderRadius: 14,
-          padding: 14,
-          marginBottom: 16,
-          background: "var(--accent-gradient)",
-          boxShadow: "0 8px 24px rgba(0,0,0,0.35)",
-        }}
-      >
-        <div style={{ fontWeight: 600 }}>Search</div>
-        <div style={{ fontSize: 12, color: "var(--panel-text-muted)" }}>
-          Find answers across your PDFs
-        </div>
+      {/* RESULTS */}
+      <div style={{ flex: 1, overflowY: "auto" }}>
+        <SearchResults
+          results={results}
+          onSelect={(r) => onOpenResult(r.documentId, r.pageNumber)}
+        />
       </div>
 
-      {/* Results */}
-      <div style={{ flex: 1, overflowY: "auto" }}>
-        {isLoading && <Loader text="Searching..." />}
-        {!isLoading && hasSearched && results.length === 0 && (
-          <div style={{ textAlign: "center", color: "var(--panel-text-muted)" }}>
-            No results
+      {/* BOTTOM SEARCH BAR — DABBA PRESERVED */}
+      <div
+        style={{
+          padding: 12,
+          borderTop: "none",
+          background: "var(--panel-bg)",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+          }}
+        >
+          <input
+            ref={inputRef}
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") handleSearch()
+            }}
+            placeholder="Search documents"
+            disabled={loading}
+            style={{
+              flex: 1,
+              height: 44,
+              padding: "0 14px",
+              borderRadius: 14,
+              border: "none",
+              background: "var(--accent-gradient)",
+              color: "var(--panel-text-primary)",
+              outline: "none",
+              fontSize: 14,
+              boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+            }}
+          />
+
+          <button
+            type="button"
+            onClick={handleSearch}
+            disabled={loading}
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 14,
+              border: "none",
+              background: "var(--accent-gradient)",
+              color: "var(--accent-gradient)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+              flexShrink: 0,
+              boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+            }}
+          >
+            <HiSearch size={20} />
+          </button>
+        </div>
+
+        {error && (
+          <div
+            style={{
+              marginTop: 6,
+              fontSize: 12,
+              color: "var(--color-error)",
+            }}
+          >
+            {error}
           </div>
         )}
       </div>
-
-      {/* Input */}
-      <div
-        style={{
-          display: "flex",
-          gap: 8,
-          marginTop: 12,
-        }}
-      >
-        <input
-          value={query}
-          onChange={e => setQuery(e.target.value)}
-          onKeyDown={e => e.key === "Enter" && runSearch(query)}
-          placeholder="Search documents..."
-          style={{
-            flex: 1,
-            padding: "10px 12px",
-            background: "var(--accent-gradient)",
-            border: "none",
-            borderRadius: 8,
-            color: "var(--panel-text-primary)",
-            boxShadow: "0 8px 24px rgba(0,0,0,0.35)",
-          }}
-        />
-
-        <button
-          onClick={() => runSearch(query)}
-          style={{
-            background: "var(--cta-gradient)",
-            border: "none",
-            color: "var(--cta-text)",
-            padding: "10px 14px",
-            borderRadius: 8,
-            cursor: "pointer",
-            boxShadow: "0 8px 24px rgba(0,0,0,0.35)",
-          }}
-        >
-          <HiSearch size={18} />
-        </button>
-      </div>
     </div>
-  );
+  )
 }
-
-export default RightPanelSearchChat;

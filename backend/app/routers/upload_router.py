@@ -356,4 +356,3 @@ async def delete_all_documents(
         success=True,
         message=f"Deleted {len(docs)} document(s)"
     )
-

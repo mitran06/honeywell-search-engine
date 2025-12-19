@@ -1,5 +1,8 @@
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
-export const APP_NAME = import.meta.env.VITE_APP_NAME || 'PDF Search Engine';
+export const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
+
+export const APP_NAME =
+  import.meta.env.VITE_APP_NAME || 'PDF Search Engine';
 
 export const STORAGE_KEYS = {
   ACCESS_TOKEN: 'accessToken',
@@ -18,7 +21,7 @@ export const ROUTES = {
 } as const;
 
 export const FILE_LIMITS = {
-  MAX_FILE_SIZE: 500 * 1024 * 1024, // 500MB
+  MAX_FILE_SIZE: 500 * 1024 * 1024,
   ACCEPTED_TYPES: {
     'application/pdf': ['.pdf'],
   },

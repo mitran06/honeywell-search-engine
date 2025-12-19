@@ -37,9 +37,12 @@ export function ThreePanelLayout({
           display: "flex",
           flexDirection: "column",
           overflow: "hidden",
+          minHeight: 0,
         }}
       >
-        <div style={{ flex: 1, overflowY: "auto" }}>{left}</div>
+        <div style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
+          {left}
+        </div>
       </aside>
 
       {/* CENTER PANEL */}
@@ -52,9 +55,21 @@ export function ThreePanelLayout({
           display: "flex",
           flexDirection: "column",
           overflow: "hidden",
+          minHeight: 0,        // 🔑 critical
+          minWidth: 0,         // 🔑 critical
         }}
       >
-        <div style={{ flex: 1, padding: 20 }}>{center}</div>
+        {/* IMPORTANT: NO PADDING HERE */}
+        <div
+          style={{
+            flex: 1,
+            minHeight: 0,
+            minWidth: 0,
+            overflow: "hidden",
+          }}
+        >
+          {center}
+        </div>
       </main>
 
       {/* RIGHT PANEL */}
@@ -67,9 +82,12 @@ export function ThreePanelLayout({
           display: "flex",
           flexDirection: "column",
           overflow: "hidden",
+          minHeight: 0,
         }}
       >
-        <div style={{ flex: 1, overflowY: "auto" }}>{right}</div>
+        <div style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
+          {right}
+        </div>
       </aside>
     </div>
   );

@@ -21,7 +21,6 @@ from app.services.search.fusion import (
     fuse_results,
 )
 
-
 router = APIRouter(prefix="/search", tags=["Search"])
 
 
@@ -31,133 +30,93 @@ class SearchRequest(BaseModel):
     limit: int = Field(default=5, ge=1, le=50)
 
 
-class BoundingBox(BaseModel):
-    x: float
-    y: float
-    width: float
-    height: float
-
-
-class TextHighlight(BaseModel):
-    text: str
-    startOffset: int
-    endOffset: int
-    boundingBox: Optional[BoundingBox] = None
-
-
-class SearchResult(BaseModel):
-    documentId: str
-    documentName: str
-    pageNumber: int
-    snippet: str
-    confidenceScore: float
-    highlights: List[TextHighlight]
-    scores: dict
-
-
-class SearchResponse(BaseModel):
-    results: List[SearchResult]
-    totalResults: int
-    searchTime: float
-
-
 @router.post("", response_model=ApiResponse)
 async def search_documents(
     request: SearchRequest,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    print(">>> SEARCH ENDPOINT HIT")
+    print("QUERY =", request.query)
+    print("USER =", current_user.id)
+
     start = time.perf_counter()
 
-    # Resolve the set of documents this user can search
-    doc_query = select(PDFMetadata).where(PDFMetadata.uploaded_by == current_user.id)
-
-    if request.documentIds:
-        try:
-            requested_ids = [uuid.UUID(did) for did in request.documentIds]
-        except ValueError:
-            raise HTTPException(status_code=400, detail="Invalid documentIds")
-        doc_query = doc_query.where(PDFMetadata.id.in_(requested_ids))
+    doc_query = select(PDFMetadata).where(
+        PDFMetadata.uploaded_by == current_user.id,
+        PDFMetadata.status == "COMPLETED",
+    )
 
     result = await db.execute(doc_query)
     docs = result.scalars().all()
 
+    print("DOC COUNT =", len(docs))
+
     if not docs:
-        raise HTTPException(status_code=404, detail="No documents available for this user")
+        return ApiResponse(
+            success=True,
+            data={
+                "results": [],
+                "totalResults": 0,
+                "searchTime": 0.0,
+            },
+            message=None,
+        )
 
     allowed_ids = [str(doc.id) for doc in docs]
     id_to_name = {str(doc.id): doc.filename for doc in docs}
 
-    # Embed query
     query_vector = await embed_query(request.query)
 
-    # Channel searches
     semantic_hits = semantic_channel(query_vector, allowed_ids)
-    lexical_hits = await lexical_channel(db, request.query, [uuid.UUID(pid) for pid in allowed_ids])
-    triple_hits = await triple_channel(db, request.query, [uuid.UUID(pid) for pid in allowed_ids])
+    lexical_hits = await lexical_channel(
+        db, request.query, [uuid.UUID(pid) for pid in allowed_ids]
+    )
+    triple_hits = await triple_channel(
+        db, request.query, [uuid.UUID(pid) for pid in allowed_ids]
+    )
 
-    # Fuse with RRF and cross-encoder reranking
-    fused = fuse_results(semantic_hits, lexical_hits, triple_hits, request.limit, query=request.query)
+    fused = fuse_results(
+        semantic_hits,
+        lexical_hits,
+        triple_hits,
+        request.limit,
+        query=request.query,
+    )
 
-    results: List[SearchResult] = []
+    results = []
     for h in fused:
         pdf_id = h.get("pdf_id")
         if pdf_id not in id_to_name:
             continue
 
-        # Use pre-computed snippet from fusion, fallback to truncation
-        snippet = h.get("snippet") or (h.get("parent_text") or h.get("text") or "")[:300]
-
-        fusion_score = float(h.get("fusion_score") or 0.0)
-        semantic_score = float(h.get("semantic_score") or 0.0)
-        lexical_score = float(h.get("lexical_score") or 0.0)
-        triple_score = float(h.get("triple_score") or 0.0)
-        rerank_score = h.get("rerank_score")
-
-        # Convert highlight dicts to TextHighlight objects
-        highlights = []
-        for hl in h.get("highlights", []):
-            highlights.append(TextHighlight(
-                text=hl.get("text", ""),
-                startOffset=hl.get("startOffset", 0),
-                endOffset=hl.get("endOffset", 0),
-            ))
-
         results.append(
-            SearchResult(
-                documentId=pdf_id,
-                documentName=id_to_name[pdf_id],
-                pageNumber=h.get("page") or 0,
-                snippet=snippet,
-                confidenceScore=max(0.0, min(100.0, fusion_score * 100.0)),
-                highlights=highlights,
-                scores={
-                    "fusion": fusion_score,
-                    "semantic": semantic_score,
-                    "lexical": lexical_score,
-                    "triple": triple_score,
-                    "rerank": rerank_score,
-                    "rrf": h.get("rrf_score"),
-                    "channels": h.get("channels", []),
+            {
+                "documentId": pdf_id,
+                "documentName": id_to_name[pdf_id],
+                "pageNumber": h.get("page") or 0,
+                "snippet": h.get("snippet") or "",
+                "confidenceScore": max(0.0, min(100.0, (h.get("fusion_score") or 0) * 100)),
+                "scores": {
+                    "fusion": h.get("fusion_score", 0),
+                    "semantic": h.get("semantic_score", 0),
+                    "lexical": h.get("lexical_score", 0),
+                    "triple": h.get("triple_score", 0),
                 },
-            )
+            }
         )
-
-    results.sort(key=lambda r: r.confidenceScore, reverse=True)
 
     duration = time.perf_counter() - start
 
-    # Persist search history (best effort)
-    history = SearchHistory(user_id=current_user.id, query=request.query)
-    db.add(history)
+    db.add(SearchHistory(user_id=current_user.id, query=request.query))
     await db.commit()
 
     return ApiResponse(
         success=True,
-        data=SearchResponse(
-            results=results,
-            totalResults=len(results),
-            searchTime=duration,
-        ),
+        data={
+            "results": results,
+            "totalResults": len(results),
+            "searchTime": duration,
+        },
         message=None,
     )

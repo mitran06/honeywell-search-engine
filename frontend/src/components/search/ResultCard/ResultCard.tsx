@@ -58,20 +58,16 @@ export function ResultCard({ result, onClick, highlightQuery }: ResultCardProps)
         <p className={styles.snippet}>{renderHighlightedSnippet()}</p>
 
         <div className={styles.scores}>
-          <span className={styles.scoreChip} title="Combined fusion score">
-            Fusion {formatPct(result.scores.fusion)}
-          </span>
+            <span className={styles.scoreChip} title="Open Information Extraction match">
+              OIE {formatPct(result.scores.triple)}
+            </span>
           <span className={styles.scoreChip} title="Semantic similarity">
             Semantic {formatPct(result.scores.semantic)}
           </span>
           <span className={styles.scoreChip} title="Keyword match">
             Lexical {formatPct(result.scores.lexical)}
           </span>
-          {result.scores.triple > 0 && (
-            <span className={styles.scoreChip} title="Relation match">
-              Triple {formatPct(result.scores.triple)}
-            </span>
-          )}
+         
         </div>
       </div>
 

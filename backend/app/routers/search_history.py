@@ -1,6 +1,6 @@
 from uuid import UUID
 from typing import List
-from datetime import datetime, timezone
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,8 +11,7 @@ from app.models.user import User
 from app.models.search_history import SearchHistory
 
 
-# Expose both /api/search/history and /api/search-history for frontend compatibility
-router = APIRouter(tags=["search-history"])
+router = APIRouter(prefix="/search-history", tags=["search-history"])
 
 
 class SearchHistoryItem(BaseModel):
@@ -33,8 +32,7 @@ class AddSearchRequest(BaseModel):
     query: str
 
 
-@router.get("/search/history", response_model=SearchHistoryResponse)
-@router.get("/search-history", response_model=SearchHistoryResponse)
+@router.get("", response_model=SearchHistoryResponse)
 async def get_search_history(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -62,8 +60,7 @@ async def get_search_history(
     }
 
 
-@router.post("/search/history", status_code=status.HTTP_201_CREATED)
-@router.post("/search-history", status_code=status.HTTP_201_CREATED)
+@router.post("", status_code=status.HTTP_201_CREATED)
 async def add_search_history(
     request: AddSearchRequest,
     db: AsyncSession = Depends(get_db),
@@ -82,7 +79,7 @@ async def add_search_history(
     
     if existing_item:
         # Update timestamp instead of creating duplicate
-        existing_item.created_at = datetime.now(timezone.utc)
+        existing_item.created_at = datetime.utcnow()
         await db.commit()
     else:
         # Create new entry
@@ -96,8 +93,7 @@ async def add_search_history(
     return {"success": True, "message": "Search added to history"}
 
 
-@router.delete("/search/history/{history_id}")
-@router.delete("/search-history/{history_id}")
+@router.delete("/{history_id}")
 async def delete_search_history(
     history_id: UUID,
     db: AsyncSession = Depends(get_db),
@@ -123,8 +119,7 @@ async def delete_search_history(
     return {"success": True, "message": "History item deleted"}
 
 
-@router.delete("/search/history")
-@router.delete("/search-history")
+@router.delete("")
 async def clear_search_history(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),

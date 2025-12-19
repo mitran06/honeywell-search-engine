@@ -1,55 +1,56 @@
-import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { HiSearch, HiDocumentText, HiArrowLeft } from 'react-icons/hi';
-import { Button, Loader } from '@/components/common';
-import { searchApi } from '@/api';
-import { CONFIDENCE_THRESHOLDS, ROUTES } from '@/utils/constants';
-import type { SearchResult } from '@/types';
-import styles from './SearchPage.module.css';
+import { useState, useEffect } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { HiSearch, HiDocumentText, HiArrowLeft } from 'react-icons/hi'
+import { Button, Loader } from '@/components/common'
+import { searchDocuments } from '@/api/search.api'
+import { CONFIDENCE_THRESHOLDS, ROUTES } from '@/utils/constants'
+import type { SearchResult } from '@/types'
+import styles from './SearchPage.module.css'
 
 export function SearchPage() {
-  const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const queryParam = searchParams.get('q') || '';
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const queryParam = searchParams.get('q') || ''
 
-  const [results, setResults] = useState<SearchResult[]>([]);
-  const [searchTime, setSearchTime] = useState<number | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [hasSearched, setHasSearched] = useState(false);
+  const [results, setResults] = useState<SearchResult[]>([])
+  const [searchTime, setSearchTime] = useState<number | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const [hasSearched, setHasSearched] = useState(false)
 
   useEffect(() => {
     const executeSearch = async () => {
       if (!queryParam.trim()) {
-        navigate(ROUTES.DASHBOARD);
-        return;
+        navigate(ROUTES.DASHBOARD)
+        return
       }
 
-      setIsLoading(true);
-      setHasSearched(true);
+      setIsLoading(true)
+      setHasSearched(true)
 
       try {
-        const response = await searchApi.search({ query: queryParam.trim(), limit: 20 });
-        setResults(response.data.results);
-        setSearchTime(response.data.searchTime);
-      } catch {
-        setResults([]);
+        const data = await searchDocuments(queryParam.trim(), 20)
+        setResults(data.results)
+        setSearchTime(data.searchTime)
+      } catch (err) {
+        console.error('Search failed:', err)
+        setResults([])
       } finally {
-        setIsLoading(false);
+        setIsLoading(false)
       }
-    };
+    }
 
-    executeSearch();
-  }, [queryParam, navigate]);
+    executeSearch()
+  }, [queryParam, navigate])
 
   const getScoreClass = (score: number) => {
-    if (score >= CONFIDENCE_THRESHOLDS.HIGH) return styles.high;
-    if (score >= CONFIDENCE_THRESHOLDS.MEDIUM) return styles.medium;
-    return styles.low;
-  };
+    if (score >= CONFIDENCE_THRESHOLDS.HIGH) return styles.high
+    if (score >= CONFIDENCE_THRESHOLDS.MEDIUM) return styles.medium
+    return styles.low
+  }
 
   const handleResultClick = (result: SearchResult) => {
-    navigate(`/viewer/${result.documentId}?page=${result.pageNumber}`);
-  };
+    navigate(`/viewer/${result.documentId}?page=${result.pageNumber}`)
+  }
 
   return (
     <div style={{ padding: 24 }}>
@@ -80,7 +81,9 @@ export function SearchPage() {
               {results.length} result{results.length !== 1 ? 's' : ''}
             </span>
             {searchTime !== null && (
-              <span className={styles.searchTime}>in {searchTime.toFixed(3)}s</span>
+              <span className={styles.searchTime}>
+                in {searchTime.toFixed(3)}s
+              </span>
             )}
           </div>
 
@@ -95,13 +98,21 @@ export function SearchPage() {
                   <div className={styles.resultContent}>
                     <div className={styles.resultHeader}>
                       <HiDocumentText size={18} />
-                      <span className={styles.documentName}>{result.documentName}</span>
-                      <span className={styles.pageNumber}>Page {result.pageNumber}</span>
+                      <span className={styles.documentName}>
+                        {result.documentName}
+                      </span>
+                      <span className={styles.pageNumber}>
+                        Page {result.pageNumber}
+                      </span>
                     </div>
                     <p className={styles.snippet}>{result.snippet}</p>
                   </div>
                   <div className={styles.confidenceScore}>
-                    <span className={`${styles.scoreValue} ${getScoreClass(result.confidenceScore)}`}>
+                    <span
+                      className={`${styles.scoreValue} ${getScoreClass(
+                        result.confidenceScore
+                      )}`}
+                    >
                       {Math.round(result.confidenceScore)}%
                     </span>
                     <span className={styles.scoreLabel}>match</span>
@@ -113,13 +124,15 @@ export function SearchPage() {
             <div className={styles.emptyState}>
               <HiSearch size={48} className={styles.emptyIcon} />
               <h3 className={styles.emptyTitle}>No results found</h3>
-              <p className={styles.emptyDescription}>Try different keywords.</p>
+              <p className={styles.emptyDescription}>
+                Try different keywords.
+              </p>
             </div>
           )}
         </>
       )}
     </div>
-  );
+  )
 }
 
-export default SearchPage;
+export default SearchPage

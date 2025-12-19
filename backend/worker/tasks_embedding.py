@@ -30,7 +30,7 @@ def embed_pdf(pdf_id: str):
     try:
         ensure_collection()
 
-        # 🔥 Only embed CHILD chunks - they are optimized for vector search
+        # Only embed CHILD chunks - they are optimized for vector search
         # Parent chunks are kept for context/reranking but not embedded
         rows = db.execute(
             text("""
@@ -84,7 +84,7 @@ def embed_pdf(pdf_id: str):
             for i in range(len(chunk_ids))
         ]
 
-        # 🔥 Insert into Qdrant
+        # Insert into Qdrant
         upsert_points(points)
 
         # Mark chunks as embedded

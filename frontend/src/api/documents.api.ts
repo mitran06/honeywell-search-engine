@@ -10,23 +10,17 @@ function authHeaders() {
 }
 
 export const documentsApi = {
-  // ------------------------------------------------------------------
   // List PDFs
-  // ------------------------------------------------------------------
   getDocuments: () =>
     apiClient.get<ApiResponse<{ documents: Document[]; total: number }>>(
       "/documents"
     ),
 
-  // ------------------------------------------------------------------
   // Get single PDF metadata
-  // ------------------------------------------------------------------
   getDocument: (id: string) =>
     apiClient.get<ApiResponse<Document>>(`/documents/${id}`),
 
-  // ------------------------------------------------------------------
   // Fetch raw PDF blob (viewer)
-  // ------------------------------------------------------------------
   getDocumentFile: (id: string) =>
     apiClient
       .get<Blob>(`/documents/${id}/file`, {
@@ -35,9 +29,7 @@ export const documentsApi = {
       })
       .then(res => res.data),
 
-  // ------------------------------------------------------------------
   // Upload PDFs
-  // ------------------------------------------------------------------
   uploadDocuments: (files: File[], onProgress?: (p: number) => void) => {
     const formData = new FormData();
     files.forEach(file => formData.append("files", file));
@@ -59,15 +51,11 @@ export const documentsApi = {
     );
   },
 
-  // ------------------------------------------------------------------
   // Delete single PDF
-  // ------------------------------------------------------------------
   deleteDocument: (id: string) =>
     apiClient.delete<ApiResponse>(`/documents/${id}`),
 
-  // ------------------------------------------------------------------
   // Delete ALL PDFs (user scoped)
-  // ------------------------------------------------------------------
   deleteAllDocuments: () =>
     apiClient.delete<ApiResponse>("/documents"),
 };

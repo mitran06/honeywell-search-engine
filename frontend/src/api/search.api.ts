@@ -1,23 +1,37 @@
-import apiClient from './client';
-import type { 
-  ApiResponse, 
-  SearchRequest, 
-  SearchResponse, 
-  SearchHistoryResponse 
-} from '@/types';
+import { apiClient } from "@/api"
 
-export const searchApi = {
-  search: async (request: SearchRequest): Promise<ApiResponse<SearchResponse>> => {
-    const response = await apiClient.post<ApiResponse<SearchResponse>>('/search', request);
-    return response.data;
-  },
+export interface SearchScores {
+  fusion: number
+  semantic: number
+  lexical: number
+  triple: number
+}
 
-  getSearchHistory: async (limit?: number): Promise<ApiResponse<SearchHistoryResponse>> => {
-    const response = await apiClient.get<ApiResponse<SearchHistoryResponse>>('/search/history', {
-      params: { limit },
-    });
-    return response.data;
-  },
-};
+export interface SearchResult {
+  documentId: string
+  documentName: string
+  pageNumber: number
+  snippet: string
+  confidenceScore: number
+  scores: SearchScores
+}
 
-export default searchApi;
+export interface SearchResponse {
+  results: SearchResult[]
+  totalResults: number
+  searchTime: number
+}
+
+export async function searchDocuments(
+  query: string,
+  limit: number = 5
+): Promise<SearchResponse> {
+  const res = await apiClient.post("/search", {
+    query,
+    limit,
+  })
+
+  // Backend returns ApiResponse { success, data, message }
+  // Correct unwrap:
+  return res.data.data
+}
