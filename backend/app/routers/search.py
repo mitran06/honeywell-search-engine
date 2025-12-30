@@ -2,7 +2,7 @@ import time
 import uuid
 import re
 import numpy as np
-from typing import List, Dict
+from typing import Dict, List
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
@@ -25,6 +25,7 @@ from app.services.search.fusion import (
     triple_channel,
     fuse_results,
 )
+from app.services.search.utils import split_query_sentences
 
 router = APIRouter(prefix="/search", tags=["Search"])
 
@@ -32,117 +33,41 @@ _SENT_SPLIT = re.compile(r'(?<=[.!?])\s+')
 _TOKEN_RE = re.compile(r"[a-zA-Z0-9]+")
 
 _STOPWORDS = {
-    "the", "is", "are", "was", "were", "of", "on", "in", "for", "to",
-    "with", "using", "use", "based", "by", "and", "or", "from"
+    "the","is","are","was","were","of","on","in","for","to",
+    "with","using","use","based","by","and","or","from"
 }
 
-def content_tokens(text: str):
+def tokens(text):
     return [
         t for t in _TOKEN_RE.findall(text.lower())
         if t not in _STOPWORDS and len(t) > 2
     ]
 
 
-def extract_highlight_tokens(sentence: str, query: str):
-    """
-    Returns stable content tokens to highlight.
-    """
-    sent_tokens = {
-        t for t in _TOKEN_RE.findall(sentence.lower())
-        if t not in _STOPWORDS and len(t) > 2
-    }
-
-    query_tokens = {
-        t for t in _TOKEN_RE.findall(query.lower())
-        if t not in _STOPWORDS and len(t) > 2
-    }
-
-    # Prefer intersection, fallback to sentence tokens
-    tokens = sent_tokens & query_tokens
-    if not tokens:
-        tokens = sent_tokens
-
-    # Cap to avoid visual noise
-    return list(tokens)[:8]
-
-# ----------------------------
-# Sentence utils
-# ----------------------------
-def split_sentences(text: str) -> List[str]:
-    return [s.strip() for s in _SENT_SPLIT.split(text) if len(s.strip()) > 20]
-
-
-async def best_sentence_score(text: str, query_vec: List[float]):
-    sentences = split_sentences(text)
-    if not sentences:
-        return "", 0.0
-
-    sent_vecs = await embed_query(sentences)
-    sims = cos_sim(np.array(query_vec), np.array(sent_vecs))[0]
-    idx = int(np.argmax(sims))
-    return sentences[idx], float(sims[idx])
-
-
-
-# Lexical scoring 
 def lexical_sentence_score(sentence: str, query: str) -> float:
-    s = sentence.lower()
-    q = query.lower()
-
-    # 1. Exact phrase match
-    if q in s:
-        return 1.0
-
-    s_tokens = content_tokens(s)
-    q_tokens = content_tokens(q)
-
-    if not q_tokens:
+    s = set(tokens(sentence))
+    q = set(tokens(query))
+    if not q:
         return 0.0
-
-    s_set = set(s_tokens)
-    q_set = set(q_tokens)
-
-    # 2. All important terms present (dominant lexical signal)
-    if q_set.issubset(s_set):
-        return 0.9
-
-    # 3. High coverage
-    coverage = len(s_set & q_set) / len(q_set)
-
-    if coverage >= 0.75:
+    overlap = len(s & q) / len(q)
+    if overlap >= 0.9:
+        return 1.0
+    if overlap >= 0.75:
         return 0.7
-    if coverage >= 0.5:
+    if overlap >= 0.5:
         return 0.5
-
     return 0.0
 
 
-def adjust_semantic_for_lexical(semantic: float, lexical: float) -> float:
-    """
-    If lexical evidence is strong, semantic should not dominate.
-    This prevents 'semantic inflation' on exact matches.
-    """
-    if lexical >= 0.9:
-        return semantic * 0.6
-    if lexical >= 0.6:
-        return semantic * 0.75
-    return semantic
+async def best_sentence_score(text: str, query_vec):
+    sents = [s.strip() for s in _SENT_SPLIT.split(text) if len(s.strip()) > 20]
+    if not sents:
+        return "", 0.0
 
-def enforce_lexical_dominance(semantic: float, lexical: float) -> float:
-    if lexical >= 0.9 and semantic > lexical:
-        return lexical
-    return semantic
-
-# ----------------------------
-# Confidence composition
-# ----------------------------
-def final_confidence(semantic: float, lexical: float, oie: float) -> float:
-    score = (
-        0.55 * semantic +
-        0.35 * lexical +
-        0.10 * oie
-    )
-    return max(0.0, min(score, 1.0))
+    sent_vecs = await embed_query(sents)
+    sims = cos_sim(np.array(query_vec), np.array(sent_vecs))[0]
+    idx = int(np.argmax(sims))
+    return sents[idx], float(sims[idx])
 
 
 class SearchRequest(BaseModel):
@@ -170,118 +95,116 @@ async def search_documents(
     if not docs:
         return ApiResponse(success=True, data={"results": []})
 
-    allowed_ids = [str(doc.id) for doc in docs]
-    id_to_doc = {str(doc.id): doc for doc in docs}
+    allowed_ids = [str(d.id) for d in docs]
+    id_map = {str(d.id): d for d in docs}
 
-    query_vec = await embed_query(request.query)
+    query_sents = split_query_sentences(request.query)
 
-    semantic_hits = semantic_channel(query_vec, allowed_ids, request.query)
+    # 🔒 CRITICAL: sentence-wise semantic fan-out, NO regression
+    if len(query_sents) >= 2:
+        query_vecs = await embed_query(query_sents)
+    else:
+        query_vecs = [await embed_query(request.query)]
+
+    semantic_hits = []
+    for qv in query_vecs:
+        semantic_hits.extend(
+            semantic_channel(qv, allowed_ids, request.query)
+        )
+
     lexical_hits = await lexical_channel(
-        db, request.query, [uuid.UUID(pid) for pid in allowed_ids]
+        db, request.query, [uuid.UUID(i) for i in allowed_ids]
     )
+
     triple_hits = await triple_channel(
-        db, request.query, [uuid.UUID(pid) for pid in allowed_ids]
+        db, request.query, [uuid.UUID(i) for i in allowed_ids]
     )
 
-    fused = fuse_results(
-        semantic_hits,
-        lexical_hits,
-        triple_hits,
-        limit=request.limit * 4,
-        query=request.query,
-    )
+    fused = fuse_results(semantic_hits, lexical_hits, triple_hits)
 
-    # ----------------------------
-    # PAGE-FIRST SELECTION
-    # ----------------------------
     pages: Dict[int, list] = {}
     for h in fused:
         pages.setdefault(h["page"], []).append(h)
 
-    page_scores = {}
-    for page, hits in pages.items():
-        score = 0.0
-        for h in hits:
-            if h.get("has_lexical"):
-                score += 2.0
-            if h.get("has_oie"):
-                score += 0.5
-            if h.get("has_semantic"):
-                score += 0.5
-        page_scores[page] = score
-
-    ranked_pages = sorted(page_scores, key=page_scores.get, reverse=True)
-
     candidates = []
 
-    for page in ranked_pages:
-        hits = pages[page]
-
-        best = None
-        best_sem = 0.0
-
+    for page, hits in pages.items():
         for h in hits:
             text = h.get("text") or h.get("parent_text") or ""
-            sentence, sem_score = await best_sentence_score(text, query_vec)
 
-            if sem_score > best_sem:
-                best_sem = sem_score
-                best = (h, sentence, sem_score)
+            best_sent = ""
+            best_sem = 0.0
+            best_lex = 0.0
 
-        if not best:
-            continue
+            # 🔒 sentence-aligned semantic + lexical
+            for i, qv in enumerate(query_vecs):
+                sent, sem = await best_sentence_score(text, qv)
+                if sem > best_sem:
+                    best_sem = sem
+                    best_sent = sent
 
-        h, sentence, sem_score = best
+                if i < len(query_sents):
+                    best_lex = max(
+                        best_lex,
+                        lexical_sentence_score(sent, query_sents[i])
+                    )
 
-        lex_score = lexical_sentence_score(sentence, request.query)
-        oie_score = 1.0 if h.get("has_oie") else 0.0
+            # 🔒 delayed guardrail, OIE can rescue
+            if len(query_sents) >= 2:
+                if best_sem < 0.4 and best_lex < 0.5 and not h.get("has_oie"):
+                    continue
 
-        adj_sem = adjust_semantic_for_lexical(sem_score, lex_score)
-        adj_sem = enforce_lexical_dominance(adj_sem, lex_score)
+            oie = 1.0 if h.get("has_oie") else 0.0
+            confidence = min(1.0, 0.55*best_sem + 0.35*best_lex + 0.10*oie)
 
-        confidence = final_confidence(adj_sem, lex_score, oie_score)
+            candidates.append({
+                "documentId": h["pdf_id"],
+                "documentName": id_map[h["pdf_id"]].filename,
+                "pageNumber": page,
+                "snippet": best_sent,
+                "highlightTokens": list(set(tokens(best_sent)) & set(tokens(request.query)))[:8],
+                "confidenceScore": int(confidence * 100),
+                "hasOie": bool(h.get("has_oie")),
+                "scores": {
+                    "semantic": round(best_sem, 3),
+                    "lexical": round(best_lex, 3),
+                },
+            })
 
-        highlight_tokens = extract_highlight_tokens(sentence, request.query)
+    # 🔒 semantic fallback for long queries
+    if len(query_sents) >= 2 and not candidates:
+        for page, hits in pages.items():
+            for h in hits:
+                text = h.get("text") or h.get("parent_text") or ""
+                sent, sem = await best_sentence_score(text, query_vecs[0])
 
-        candidates.append({
-            "documentId": h["pdf_id"],
-            "documentName": id_to_doc[h["pdf_id"]].filename,
-            "pageNumber": page,
-            "snippet": sentence,
-            "highlightTokens": highlight_tokens,
-            "confidence": confidence,
-            "scores": {
-                "semantic": round(adj_sem, 3),
-                "lexical": round(lex_score, 3),
-            },
-        })
+                candidates.append({
+                    "documentId": h["pdf_id"],
+                    "documentName": id_map[h["pdf_id"]].filename,
+                    "pageNumber": page,
+                    "snippet": sent,
+                    "highlightTokens": tokens(sent)[:8],
+                    "confidenceScore": int(min(1.0, sem) * 100),
+                    "hasOie": bool(h.get("has_oie")),
+                    "scores": {
+                        "semantic": round(sem, 3),
+                        "lexical": 0.0,
+                    },
+                })
 
+    candidates.sort(key=lambda x: x["confidenceScore"], reverse=True)
 
-    # GLOBAL SORT BY CONFIDENCE
-    candidates.sort(key=lambda x: x["confidence"], reverse=True)
-
-    results = []
-    for c in candidates[:request.limit]:
-        results.append({
-            "documentId": c["documentId"],
-            "documentName": c["documentName"],
-            "pageNumber": c["pageNumber"],
-            "snippet": c["snippet"],
-            "highlightTokens": c["highlightTokens"],
-            "confidenceScore": int(c["confidence"] * 100),
-            "scores": c["scores"],
-        })
-
-
-
-    db.add(SearchHistory(user_id=current_user.id, query=request.query))
+    db.add(SearchHistory(
+        user_id=current_user.id,
+        query=request.query[:500]
+    ))
     await db.commit()
 
     return ApiResponse(
         success=True,
         data={
-            "results": results,
-            "totalResults": len(results),
+            "results": candidates[:request.limit],
+            "totalResults": len(candidates),
             "searchTime": round(time.perf_counter() - start, 3),
         },
     )

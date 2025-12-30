@@ -62,9 +62,14 @@ export function ResultCard({ result, onClick, highlightQuery }: ResultCardProps)
         <p className={styles.snippet}>{renderHighlightedSnippet()}</p>
 
         <div className={styles.scores}>
-            <span className={styles.scoreChip} title="Open Information Extraction match">
-              OIE {formatPct(result.scores.triple)}
+          {result.hasOie && (
+            <span
+              className={styles.scoreChip}
+              title="Open Information Extraction match"
+            >
+              OIE ✓
             </span>
+          )}
           <span className={styles.scoreChip} title="Semantic similarity">
             Semantic {formatPct(result.scores.semantic)}
           </span>

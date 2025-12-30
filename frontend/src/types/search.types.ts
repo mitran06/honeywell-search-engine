@@ -27,6 +27,8 @@ export interface SearchResult {
   };
   highlightText: string
   rawChunkText: string
+  hasOie: boolean
+
 
 }
 

@@ -1,5 +1,6 @@
 import { useState, useRef } from "react"
 import { HiSearch } from "react-icons/hi"
+import { FiLoader } from "react-icons/fi"
 import { searchDocuments } from "@/api/search.api"
 import { SearchResults } from "../search/SearchResults"
 import type { SearchResult } from "@/types"
@@ -24,35 +25,83 @@ export function RightPanelSearchChat({ onOpenResult }: Props) {
 
     setLoading(true)
     setError(null)
+    setResults([])
 
     try {
       const data = await searchDocuments(query, 5)
       setResults(data.results)
     } catch (err) {
       console.error("Search failed:", err)
-      setResults([])
       setError("Search failed")
     } finally {
       setLoading(false)
     }
   }
 
-  return (
-    <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
-      <div style={{ flex: 1, overflowY: "auto" }}>
+  const renderCenterState = () => {
+    if (loading) {
+      return (
+        <div
+          style={{
+            height: "100%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexDirection: "column",
+            gap: 12,
+            color: "var(--panel-text-secondary)",
+          }}
+        >
+          <FiLoader size={28} className="spin" />
+          <span style={{ fontSize: 14 }}>Searching documents…</span>
+        </div>
+      )
+    }
+
+    if (error) {
+      return (
+        <div
+          style={{
+            height: "100%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexDirection: "column",
+            gap: 8,
+            color: "var(--color-error)",
+            fontSize: 14,
+          }}
+        >
+          {error}
+        </div>
+      )
+    }
+
+    if (results.length > 0) {
+      return (
         <SearchResults
           results={results}
           onSelect={(r) =>
-          onOpenResult(
-            r.documentId,
-            r.pageNumber,
-            query
-              .toLowerCase()
-              .split(/\s+/)
-              .filter(w => w.length > 2)
-          )
+            onOpenResult(
+              r.documentId,
+              r.pageNumber,
+              query
+                .toLowerCase()
+                .split(/\s+/)
+                .filter(w => w.length > 2)
+            )
           }
         />
+      )
+    }
+
+    return null
+  }
+
+  return (
+    <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
+      <div style={{ flex: 1, overflowY: "auto" }}>
+        {renderCenterState()}
       </div>
 
       <div style={{ padding: 12, background: "var(--panel-bg)" }}>
@@ -98,13 +147,9 @@ export function RightPanelSearchChat({ onOpenResult }: Props) {
             <HiSearch size={20} />
           </button>
         </div>
-
-        {error && (
-          <div style={{ marginTop: 6, fontSize: 12, color: "var(--color-error)" }}>
-            {error}
-          </div>
-        )}
       </div>
     </div>
   )
 }
+
+export default RightPanelSearchChat

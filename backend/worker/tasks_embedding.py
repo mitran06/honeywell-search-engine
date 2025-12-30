@@ -42,12 +42,9 @@ def embed_pdf(pdf_id: str):
             {"pid": pdf_id}
         ).fetchall()
 
+        # ONLY CHANGE: do NOT mark COMPLETED here
         if not rows:
-            db.execute(
-                text("UPDATE pdf_metadata SET status='COMPLETED' WHERE id=:id"),
-                {"id": pdf_id},
-            )
-            db.commit()
+            logger.info("No child chunks to embed for %s", pdf_id)
             return
 
         texts = []
@@ -96,6 +93,7 @@ def embed_pdf(pdf_id: str):
             {"pid": pdf_id},
         )
 
+        # COMPLETED is set ONLY after embeddings + Qdrant upsert
         db.execute(
             text("UPDATE pdf_metadata SET status='COMPLETED' WHERE id=:id"),
             {"id": pdf_id},
