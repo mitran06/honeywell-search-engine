@@ -1,6 +1,6 @@
-export { LoginPage } from './LoginPage';
-export { RegisterPage } from './RegisterPage';
-export { DashboardPage } from './DashboardPage';
-export { SearchPage } from './SearchPage';
-export { DocumentsPage } from './DocumentsPage';
-export { ViewerPage } from './ViewerPage';
+export { default as LoginPage } from "./LoginPage/LoginPage";
+export { default as RegisterPage } from "./RegisterPage/RegisterPage";
+export { default as DashboardPage } from "./DashboardPage/DashboardPage";
+
+export { default as SearchPage } from "./SearchPage/SearchPage";
+export { default as ViewerPage } from "./ViewerPage/ViewerPage";

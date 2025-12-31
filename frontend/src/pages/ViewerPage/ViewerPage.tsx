@@ -1,217 +1,94 @@
-import { useEffect, useMemo, useRef, useState } from "react"
-import { useParams, useNavigate, useLocation } from "react-router-dom"
-import { Document, Page } from "react-pdf"
-import {
-  HiArrowLeft,
-  HiChevronLeft,
-  HiChevronRight,
-  HiZoomIn,
-  HiZoomOut,
-} from "react-icons/hi"
+import { useEffect, useState } from "react"
+import { useParams, useSearchParams, useNavigate } from "react-router-dom"
+import { HiArrowLeft } from "react-icons/hi"
+import PdfJsViewer from "@/components/viewer/PdfJsViewer"
 import { documentsApi } from "@/api"
 import { ROUTES } from "@/utils/constants"
-import styles from "./ViewerPage.module.css"
 
-import "react-pdf/dist/Page/TextLayer.css"
-import "react-pdf/dist/Page/AnnotationLayer.css"
-
-/* ---------- SAFE NORMALIZE ---------- */
-const normalize = (text: unknown) => {
-  if (typeof text !== "string") return ""
-  return text
-    .toLowerCase()
-    .replace(/[^\w\s]/g, "")
-    .replace(/\s+/g, " ")
-    .trim()
-}
-
-interface ViewerPageProps {
-  documentIdOverride?: string
-  pageOverride?: number
-  highlightTextOverride?: string | null
-  embedded?: boolean
-}
-
-export default function ViewerPage({
-  documentIdOverride,
-  pageOverride,
-  highlightTextOverride,
-  embedded = false,
-}: ViewerPageProps) {
-  const params = useParams<{ documentId: string }>()
-  const location = useLocation()
+export default function ViewerPage() {
+  const { documentId } = useParams<{ documentId: string }>()
+  const [searchParams] = useSearchParams()
   const navigate = useNavigate()
 
-  const documentId = documentIdOverride || params.documentId
+  const pageParam = searchParams.get("page")
+  const highlightParam = searchParams.get("highlight")
 
-  const highlightRaw =
-    typeof highlightTextOverride === "string"
-      ? highlightTextOverride
-      : typeof (location.state as any)?.highlightText === "string"
-      ? (location.state as any).highlightText
-      : ""
-
-  const highlightText = useMemo(
-    () => normalize(highlightRaw),
-    [highlightRaw]
-  )
-
-  const pageContainerRef = useRef<HTMLDivElement>(null)
-
-  const [pdfBlob, setPdfBlob] = useState<Blob | null>(null)
-  const [numPages, setNumPages] = useState(0)
-  const [page, setPage] = useState(pageOverride || 1)
-  const [scale, setScale] = useState(1.0)
   const [docName, setDocName] = useState("")
   const [error, setError] = useState<string | null>(null)
 
-  /* -------- Load PDF -------- */
+  const page = pageParam ? Number(pageParam) : 1
+  const highlightText =
+    typeof highlightParam === "string" && highlightParam.trim()
+      ? highlightParam
+      : null
+
   useEffect(() => {
     if (!documentId) return
 
-    const load = async () => {
+    const loadMeta = async () => {
       try {
         const meta = await documentsApi.getDocument(documentId)
         setDocName(meta.data.filename)
-
-        const blob = await documentsApi.getDocumentFile(documentId)
-        setPdfBlob(blob)
-
-        if (pageOverride) setPage(pageOverride)
       } catch {
-        setError("Failed to load PDF")
+        setError("Failed to load document metadata")
       }
     }
 
-    load()
-  }, [documentId, pageOverride])
+    loadMeta()
+  }, [documentId])
 
-  /* -------- PARTIAL BUT WORKING HIGHLIGHT -------- */
-  useEffect(() => {
-    if (!highlightText || !pageContainerRef.current) return
-
-    const timeout = setTimeout(() => {
-      const container = pageContainerRef.current!
-      const spans = Array.from(
-        container.querySelectorAll<HTMLSpanElement>(
-          ".react-pdf__Page__textContent span"
-        )
-      )
-
-      if (spans.length === 0) return
-
-      // reset
-      spans.forEach(s => {
-        s.innerHTML = s.textContent || ""
-      })
-
-      const fullText = spans
-        .map(s => normalize(s.textContent || ""))
-        .join(" ")
-
-      const matchIndex = fullText.indexOf(highlightText)
-      if (matchIndex === -1) return
-
-      let charPos = 0
-      let firstHit: HTMLElement | null = null
-
-      for (const span of spans) {
-        const raw = span.textContent || ""
-        const norm = normalize(raw)
-
-        const start = charPos
-        const end = charPos + norm.length
-
-        if (
-          end >= matchIndex &&
-          start <= matchIndex + highlightText.length &&
-          raw.trim()
-        ) {
-          span.innerHTML = `<mark style="background:#ffe58a;padding:0;">${raw}</mark>`
-          if (!firstHit) firstHit = span
-        }
-
-        charPos += norm.length + 1
-      }
-
-      firstHit?.scrollIntoView({ behavior: "smooth", block: "center" })
-    }, 400)
-
-    return () => clearTimeout(timeout)
-  }, [highlightText, page, scale])
+  if (!documentId) {
+    return <div style={{ padding: 24 }}>Invalid document</div>
+  }
 
   if (error) {
-    return <div className={styles.error}>{error}</div>
+    return <div style={{ padding: 24, color: "var(--danger)" }}>{error}</div>
   }
 
   return (
-    <div className={styles.container}>
-      {!embedded && (
-        <div className={styles.toolbar}>
-          <button
-            className={styles.iconBtn}
-            onClick={() => navigate(ROUTES.DASHBOARD)}
-          >
-            <HiArrowLeft size={18} />
-          </button>
+    <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          padding: "12px 16px",
+          borderBottom: "1px solid var(--panel-border)",
+          background: "var(--panel-bg)",
+        }}
+      >
+        <button
+          onClick={() => navigate(ROUTES.DASHBOARD)}
+          style={{
+            border: "none",
+            background: "transparent",
+            cursor: "pointer",
+            color: "var(--panel-text-primary)",
+          }}
+        >
+          <HiArrowLeft size={18} />
+        </button>
 
-          <span className={styles.title}>{docName}</span>
+        <span
+          style={{
+            fontWeight: 600,
+            fontSize: 14,
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+          }}
+          title={docName}
+        >
+          {docName}
+        </span>
+      </div>
 
-          <div className={styles.controls}>
-            <button
-              className={styles.iconBtn}
-              disabled={page <= 1}
-              onClick={() => setPage(p => p - 1)}
-            >
-              <HiChevronLeft size={20} />
-            </button>
-
-            <span>
-              {page} / {numPages}
-            </span>
-
-            <button
-              className={styles.iconBtn}
-              disabled={page >= numPages}
-              onClick={() => setPage(p => p + 1)}
-            >
-              <HiChevronRight size={20} />
-            </button>
-
-            <button
-              className={styles.iconBtn}
-              onClick={() => setScale(s => Math.max(0.5, s - 0.25))}
-            >
-              <HiZoomOut size={18} />
-            </button>
-
-            <span>{Math.round(scale * 100)}%</span>
-
-            <button
-              className={styles.iconBtn}
-              onClick={() => setScale(s => Math.min(3, s + 0.25))}
-            >
-              <HiZoomIn size={18} />
-            </button>
-          </div>
-        </div>
-      )}
-
-      <div className={styles.viewer}>
-        {pdfBlob && (
-          <Document
-            file={pdfBlob}
-            onLoadSuccess={({ numPages }) => setNumPages(numPages)}
-          >
-            <div ref={pageContainerRef}>
-              <Page
-                pageNumber={page}
-                scale={scale}
-                renderAnnotationLayer={false}
-              />
-            </div>
-          </Document>
-        )}
+      <div style={{ flex: 1 }}>
+        <PdfJsViewer
+          documentId={documentId}
+          page={page}
+          highlightText={highlightText}
+        />
       </div>
     </div>
   )

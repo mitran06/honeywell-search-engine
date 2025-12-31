@@ -1,1 +1,0 @@
-export { TextHighlighter } from './TextHighlighter';
