@@ -11,14 +11,16 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("embedder")
 
-
-# SYNC DATABASE
+# ------------------------------------------------------
+# SYNC DATABASE (REQUIRED FOR CELERY ON WINDOWS)
+# ------------------------------------------------------
 SYNC_DB_URL = settings.database_url.replace("+asyncpg", "")
 engine = create_engine(SYNC_DB_URL, pool_pre_ping=True)
 SessionLocal = sessionmaker(bind=engine)
 
-
+# ------------------------------------------------------
 # CELERY TASK
+# ------------------------------------------------------
 @celery_app.task(name="embed_pdf")
 def embed_pdf(pdf_id: str):
     logger.info("Starting embedding for PDF: %s", pdf_id)

@@ -95,6 +95,8 @@ async def logout(
     current_user: Annotated[User, Depends(get_current_user)],
 ):
     """Logout the current user."""
+    # In a more complete implementation, you would invalidate the token
+    # by adding it to a blacklist in Redis. For now, we just return success.
     return ApiResponse(
         success=True,
         message="Logged out successfully",

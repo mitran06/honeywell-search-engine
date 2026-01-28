@@ -56,6 +56,7 @@ app.include_router(auth_router, prefix="/api/auth")
 app.include_router(search_history_router, prefix="/api")
 app.include_router(upload_router, prefix="/api")
 
+# 🔴 THIS IS THE FIX
 app.include_router(search_router, prefix="/api")
 
 

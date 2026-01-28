@@ -15,8 +15,9 @@ import uuid
 
 router = APIRouter(prefix="/documents", tags=["Documents"])
 
-
+# ------------------------------------------------------------------------------
 # MinIO client
+# ------------------------------------------------------------------------------
 minio_client = Minio(
     settings.minio_endpoint,
     access_key=settings.minio_access_key,
@@ -43,8 +44,9 @@ async def cleanup_orphaned_file(object_key: str):
         pass
 
 
-
+# ------------------------------------------------------------------------------
 # UPLOAD PDFs
+# ------------------------------------------------------------------------------
 @router.post("/upload")
 async def upload_documents(
     files: list[UploadFile] = File(...),
@@ -126,8 +128,9 @@ async def upload_documents(
     )
 
 
-
+# ------------------------------------------------------------------------------
 # LIST DOCUMENTS
+# ------------------------------------------------------------------------------
 @router.get("")
 async def list_documents(
     db: AsyncSession = Depends(get_db),
@@ -161,7 +164,9 @@ async def list_documents(
     )
 
 
+# ------------------------------------------------------------------------------
 # GET SINGLE DOCUMENT METADATA
+# ------------------------------------------------------------------------------
 @router.get("/{document_id}")
 async def get_document(
     document_id: str,
@@ -200,7 +205,9 @@ async def get_document(
     )
 
 
+# ------------------------------------------------------------------------------
 # DOWNLOAD PDF FILE
+# ------------------------------------------------------------------------------
 @router.get("/{document_id}/file")
 async def get_document_file(
     document_id: str,
@@ -240,7 +247,9 @@ async def get_document_file(
     )
 
 
+# ------------------------------------------------------------------------------
 # DELETE SINGLE DOCUMENT (MinIO + Qdrant + DB)
+# ------------------------------------------------------------------------------
 @router.delete("/{document_id}")
 async def delete_document(
     document_id: str,
@@ -279,7 +288,9 @@ async def delete_document(
     return ApiResponse(success=True, message="Document deleted")
 
 
+# ------------------------------------------------------------------------------
 # DELETE ALL DOCUMENTS (USER)
+# ------------------------------------------------------------------------------
 @router.delete("")
 async def delete_all_documents(
     db: AsyncSession = Depends(get_db),

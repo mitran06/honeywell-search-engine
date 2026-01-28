@@ -48,18 +48,19 @@ def word_count(text: str) -> int:
     return len(text.split())
 
 
-
+# ------------------------------------------------------
 # Configuration
+# ------------------------------------------------------
 class ChunkConfig:
     """Chunking configuration optimized for MiniLM-L6-v2."""
     
     # Parent chunks: large context for display and reranking
     PARENT_MAX_TOKENS = 500      # ~400 words
-    PARENT_MIN_TOKENS = 100      
+    PARENT_MIN_TOKENS = 100      # Don't create tiny parents
     
     # Child chunks: small for precise vector search
     CHILD_MAX_TOKENS = 200       # Within MiniLM's 256 token limit
-    CHILD_MIN_TOKENS = 30       
+    CHILD_MIN_TOKENS = 30        # Avoid too-small chunks
     
     # Overlap for continuity
     OVERLAP_SENTENCES = 1        # Sentence overlap between children
@@ -86,8 +87,9 @@ class Chunk:
     parent_index: Optional[int] = None  # For child chunks
 
 
-
+# ------------------------------------------------------
 # Sentence Splitting
+# ------------------------------------------------------
 def split_into_sentences(text: str) -> List[str]:
     """Split text into sentences, preserving semantic boundaries."""
     # First normalize whitespace
@@ -115,8 +117,9 @@ def split_into_paragraphs(text: str) -> List[str]:
     return [p.strip() for p in paragraphs if p.strip()]
 
 
-
-# Recursive Chunking 
+# ------------------------------------------------------
+# Recursive Chunking (Improvement #3)
+# ------------------------------------------------------
 def recursive_chunk(
     text: str, 
     max_tokens: int = ChunkConfig.PARENT_MAX_TOKENS
@@ -243,8 +246,9 @@ def merge_small_chunks(chunks: List[str], min_tokens: int) -> List[str]:
     return result
 
 
-
-# Parent-Child Chunking 
+# ------------------------------------------------------
+# Parent-Child Chunking (Improvement #4)
+# ------------------------------------------------------
 def create_parent_child_chunks(
     text: str,
     page_num: int
@@ -314,7 +318,10 @@ def create_parent_child_chunks(
     
     return parents, children
 
+
+# ------------------------------------------------------
 # Main Entry Point
+# ------------------------------------------------------
 def chunk_document_page(
     page_text: str,
     page_num: int
@@ -333,7 +340,10 @@ def chunk_document_page(
     """
     return create_parent_child_chunks(page_text, page_num)
 
+
+# ------------------------------------------------------
 # Legacy Compatibility
+# ------------------------------------------------------
 def chunk_text_legacy(
     text: str, 
     max_tokens: int = 250, 

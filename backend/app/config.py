@@ -3,35 +3,49 @@ from functools import lru_cache
 
 
 class Settings(BaseSettings):
+    # --------------------------------------------------
     # Database
+    # --------------------------------------------------
     database_url: str = "postgresql+asyncpg://pdfuser:pdfpass@localhost:5432/pdfmeta"
 
+    # --------------------------------------------------
     # MinIO
+    # --------------------------------------------------
     minio_endpoint: str = "localhost:9000"
     minio_access_key: str = "minioadmin"
     minio_secret_key: str = "minioadmin"
     minio_bucket: str = "pdf-ingest"
 
+    # --------------------------------------------------
     # JWT
+    # --------------------------------------------------
     jwt_secret_key: str = "your-super-secret-key-change-in-production"
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
     refresh_token_expire_days: int = 7
 
+    # --------------------------------------------------
     # Embeddings
+    # --------------------------------------------------
     embedding_model_name: str = "sentence-transformers/all-MiniLM-L6-v2"
     embedding_dim: int = 384
 
+    # --------------------------------------------------
     # Qdrant
+    # --------------------------------------------------
     qdrant_host: str = "localhost"
     qdrant_port: int = 6333
     qdrant_collection: str = "pdf_chunks"
 
+    # --------------------------------------------------
     # App
+    # --------------------------------------------------
     app_name: str = "PDF Search Engine"
     debug: bool = True
 
+    # --------------------------------------------------
     # Upload limits
+    # --------------------------------------------------
     max_upload_size: int = 500 * 1024 * 1024  # 500MB
 
     class Config:

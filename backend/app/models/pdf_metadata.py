@@ -50,7 +50,7 @@ class PDFMetadata(Base):
     )
     uploaded_by: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
-        nullable=True,  # link to user who uploaded
+        nullable=True,  # Optional: link to user who uploaded
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
